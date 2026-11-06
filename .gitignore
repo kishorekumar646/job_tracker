@@ -1,0 +1,131 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.manifest
+*.spec
+*.pdo
+MANIFEST
+
+# Virtual environments
+venv/
+.env/
+ENV/
+env/
+.venv/
+.env/
+
+# FastAPI/SQLAlchemy
+*.db
+*.sqlite
+*.sqlite3
+.mypy_cache/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pylint
+.pylint.old
+
+# mypy
+.mypy_cache/
+
+# TypeScript/JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.pnpm-store/
+.vercel/
+.next/
+.nuxt/
+
+# Vite
+dist/
+.vite/
+.cache/
+
+# Build outputs
+build/
+*.min.js
+*.css.map
+
+# IDE
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+*.project
+*.iws
+*.ipr
+.history/
+*.swp
+*.DS_Store
+Thumbs.db
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.test
+.env.production
+!.env.example
+
+# Sentry source maps
+uploads/
+
+# Migration files (optional - uncomment if you don't want to track migrations)
+# alembic/versions/
