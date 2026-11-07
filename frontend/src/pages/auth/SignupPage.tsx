@@ -74,7 +74,6 @@ export function SignupPage() {
       await signup(email.trim(), fullName.trim() || undefined, dateOfBirth || undefined)
       setStep(2)
     } catch (err: unknown) {
-      console.error('Signup error:', err)
       const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
       const msg = Array.isArray(raw)
         ? (raw[0] as { msg?: string })?.msg ?? 'Registration failed.'
@@ -93,7 +92,6 @@ export function SignupPage() {
       await activateAccount(email.trim(), otp.trim())
       setStep(3)
     } catch (err: unknown) {
-      console.error('Activate error:', err)
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
         'Activation failed. Check your OTP and try again.'
