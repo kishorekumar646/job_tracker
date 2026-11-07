@@ -1,11 +1,25 @@
 // Author: Kishore Kumar
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, LogOut } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Briefcase,
+  ClipboardList,
+  Crown,
+  LogOut,
+  Zap,
+} from 'lucide-react'
 import { logout } from '../../api/auth'
+import { useAuthStore } from '../../store/authStore'
 
 export function JobPortalSidebar() {
+  const { user, clearAuth } = useAuthStore()
+  const isAdmin = user?.role === 'admin'
+
   async function handleLogout() {
-    try { await logout() } catch { /* ignore */ }
+    try {
+      await logout()
+    } catch { /* ignore */ }
+    clearAuth()
     window.location.href = '/login'
   }
 
@@ -37,7 +51,55 @@ export function JobPortalSidebar() {
           <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
           Dashboard
         </NavLink>
+
+        <NavLink
+          to="/jobs"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-primary-600/20 text-primary-400'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+            }`
+          }
+        >
+          <ClipboardList className="h-4 w-4 flex-shrink-0" />
+          My Applications
+        </NavLink>
+
+        <NavLink
+          to="/auto-apply"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-primary-600/20 text-primary-400'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+            }`
+          }
+        >
+          <Zap className="h-4 w-4 flex-shrink-0" />
+          Auto Apply
+        </NavLink>
       </nav>
+
+      {/* Admin — only visible to admins */}
+      {isAdmin && (
+        <>
+          <div className="my-2 border-t border-gray-800" />
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-amber-500/20 text-amber-400'
+                  : 'text-amber-500/70 hover:bg-amber-500/10 hover:text-amber-400'
+              }`
+            }
+          >
+            <Crown className="h-4 w-4 flex-shrink-0" />
+            Admin
+          </NavLink>
+        </>
+      )}
 
       {/* Footer */}
       <div className="px-4 py-4 border-t border-gray-800">

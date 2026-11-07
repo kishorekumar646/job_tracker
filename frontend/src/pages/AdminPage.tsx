@@ -47,7 +47,7 @@ import {
   Wifi,
   Cake,
 } from 'lucide-react'
-import { DashboardLayout } from '../components/layout/DashboardLayout'
+import { JobPortalDashboardLayout } from '../components/layout/JobPortalDashboardLayout'
 import {
   AdminUser,
   CreateUserResult,
@@ -628,7 +628,7 @@ export function AdminPage() {
   }
 
   return (
-    <DashboardLayout title="Admin">
+    <JobPortalDashboardLayout title="Admin">
       {/* Hero header */}
       <div className="relative mb-6 overflow-hidden rounded-2xl border border-primary-500/20 bg-gradient-to-br from-gray-900 via-gray-900 to-primary-950/40 p-5">
         <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-primary-600/15 blur-3xl" />
@@ -1267,7 +1267,7 @@ export function AdminPage() {
           onCancel={() => setConfirm(null)}
         />
       )}
-    </DashboardLayout>
+    </JobPortalDashboardLayout>
   )
 }
 
@@ -3093,7 +3093,7 @@ function AddUserModal({
   const [error, setError] = useState('')
   const [emailError, setEmailError] = useState('')
 
-  const isEmailValid = email.trim().length > 0 && email.trim().endsWith('@infosys.com')
+  const isEmailValid = email.trim().length > 0 && email.trim().endsWith('@gmail.com')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -3104,8 +3104,8 @@ function AddUserModal({
       setEmailError('Email address is required.')
       return
     }
-    if (!email.trim().endsWith('@infosys.com')) {
-      setEmailError('Only @infosys.com email addresses are permitted.')
+    if (!email.trim().endsWith('@gmail.com')) {
+      setEmailError('Only @gmail.com email addresses are permitted.')
       return
     }
 
@@ -3137,7 +3137,7 @@ function AddUserModal({
           </div>
           <div>
             <h3 className="text-base font-semibold text-gray-100">Add New User</h3>
-            <p className="text-xs text-gray-500">Only @infosys.com addresses are allowed.</p>
+            <p className="text-xs text-gray-500">Only @gmail.com addresses are allowed.</p>
           </div>
         </div>
 
@@ -3149,7 +3149,7 @@ function AddUserModal({
               autoFocus
               value={email}
               onChange={(e) => { setEmail(e.target.value); setEmailError(''); setError('') }}
-              placeholder="name@infosys.com"
+              placeholder="name@gmail.com"
               className={`${INPUT_CLS} ${emailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
             />
             {emailError && (

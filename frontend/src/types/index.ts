@@ -182,3 +182,29 @@ export interface AppNotification {
   is_read: boolean
   created_at: string
 }
+
+// ── Job Application Tracker Types ────────────────────────────────────────────────
+
+export type ApplicationStatus = 'Applied' | 'Interview Scheduled' | 'Offer Received' | 'Rejected' | 'Withdrawn'
+
+export interface JobApplication {
+  id: string
+  company: string
+  job_title: string
+  location: string
+  status: ApplicationStatus
+  applied_date: string
+  job_link?: string
+  resume_version?: string
+  notes?: string
+}
+
+export interface AutoApplySettings {
+  connected_accounts: Record<string, { connected: boolean; username?: string }>
+  resume_name?: string | null
+  preferred_cities: string[]
+  desired_roles: string[]
+  min_salary: number
+  experience_level: string
+  is_auto_apply_active: boolean
+}

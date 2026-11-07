@@ -18,7 +18,8 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Form, Body, HTTPException, Request, Response, Cookie, Query, status
+from fastapi import APIRouter, Depends, Form, Body, HTTPException, Request, Response, Cookie, Query
+from fastapi import status as fastapi_status
 from fastapi.responses import Response as FastAPIResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +55,7 @@ def _check_rate_limit(request: Request) -> None:
         _rate_counters[ip] = (count, window_start)
         if count > _RATE_LIMIT:
             raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                status_code=fastapi_status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Too many requests — please wait before trying again.",
             )
 
@@ -62,11 +63,11 @@ def _check_rate_limit(request: Request) -> None:
 def _validate_email(email: str) -> str:
     email = email.strip().lower()
     if not email.endswith("@gmail.com"):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Only @gmail.com email addresses are allowed.")
+        raise HTTPException(status_code=fastapi_status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Only @gmail.com email addresses are allowed.")
     return email
 
 
-@router.post("/signup", status_code=status.HTTP_201_CREATED)
+@router.post("/signup", status_code=fastapi_status.HTTP_201_CREATED)
 async def signup(
     email: Annotated[str, Form()],
     full_name: Annotated[Optional[str], Form()] = None,
@@ -77,7 +78,7 @@ async def signup(
     email = _validate_email(email)
     existing_user = await get_user_by_email(db, email)
     if existing_user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        raise HTTPException(status_code=fastapi_status.HTTP_409_CONFLICT, detail="Email already registered")
 
     user = await create_user(db, UserCreate(email=email, name=full_name, date_of_birth=date_of_birth))
 
@@ -108,7 +109,7 @@ async def totp_qr(email: Annotated[str, Query()], db: AsyncSession = Depends(get
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user or not user.totp_secret:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found or TOTP not set")
+        raise HTTPException(status_code=fastapi_status.HTTP_404_NOT_FOUND, detail="User not found or TOTP not set")
 
     import qrcode
     import io
@@ -124,16 +125,16 @@ async def activate(email: Annotated[str, Form()], otp: Annotated[str, Form()], d
     """Activate account using TOTP code."""
     user = await get_user_by_email(db, email)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=fastapi_status.HTTP_404_NOT_FOUND, detail="User not found")
 
     if user.is_approved:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Account already activated")
+        raise HTTPException(status_code=fastapi_status.HTTP_400_BAD_REQUEST, detail="Account already activated")
 
     if not user.totp_secret:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User has no TOTP secret set")
+        raise HTTPException(status_code=fastapi_status.HTTP_400_BAD_REQUEST, detail="User has no TOTP secret set")
 
     if not verify_totp(user.totp_secret, otp):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code")
 
     user = await activate_user(db, user.id)
 
@@ -147,7 +148,7 @@ async def activate(email: Annotated[str, Form()], otp: Annotated[str, Form()], d
         "message": "Account activated successfully!",
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_at": int(datetime.utcnow().timestamp() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
+        "expires_at": int(time.time() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
         "user": {
             "id": user.id,
             "email": user.email,
@@ -164,10 +165,10 @@ async def login(email: Annotated[str, Form()], otp: Annotated[str, Form()], resp
     """Login with email and TOTP code, set HTTP-only cookies."""
     user = await get_user_by_email(db, email)
     if not user or not user.is_approved:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or account not activated")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or account not activated")
 
     if not user.totp_secret or not verify_totp(user.totp_secret, otp):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code")
 
     access_token = auth_manager.create_access_token(str(user.id), user.role)
     refresh_token = auth_manager.create_refresh_token(str(user.id))
@@ -196,7 +197,7 @@ async def login(email: Annotated[str, Form()], otp: Annotated[str, Form()], resp
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_at": int(datetime.utcnow().timestamp() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
+        "expires_at": int(time.time() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
         "user": {
             "id": user.id,
             "email": user.email,
@@ -222,18 +223,18 @@ async def refresh_token(
 ):
     """Refresh access token using refresh token from cookie."""
     if not refresh_token_cookie:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="No refresh token")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
 
     payload = auth_manager.verify_token(refresh_token_cookie, token_type="refresh")
     if not payload:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
     user = await get_user_by_id(db, int(payload.get("sub")))
     if not user:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     if user.refresh_token != refresh_token_cookie:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Token mismatch")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Token mismatch")
 
     new_access_token = auth_manager.create_access_token(str(user.id), user.role)
 
@@ -250,7 +251,7 @@ async def refresh_token(
     return {
         "access_token": new_access_token,
         "token_type": "bearer",
-        "expires_at": int(datetime.utcnow().timestamp() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
+        "expires_at": int(time.time() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
     }
 
 
@@ -258,15 +259,15 @@ async def refresh_token(
 async def get_current_user(access_token: str = Cookie(None), db: AsyncSession = Depends(get_async_db)):
     """Get current user from token."""
     if not access_token:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     payload = auth_manager.verify_token(access_token)
     if not payload:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     user = await get_user_by_id(db, int(payload.get("sub")))
     if not user:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     return {
         "id": user.id,

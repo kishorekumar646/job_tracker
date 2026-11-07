@@ -12,12 +12,18 @@ from .api.v1.jobs import router as jobs_router
 from .api.v1.applications import router as applications_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter
 
 app = FastAPI(
     title="Job Tracker API",
     version="1.0.0",
     docs_url="/docs",
 )
+
+# Health check endpoint for network connectivity verification
+@app.api_route("/api/v1/ping", methods=["GET", "HEAD"])
+async def ping():
+    return {"status": "ok"}
 
 app.add_middleware(
     CORSMiddleware,

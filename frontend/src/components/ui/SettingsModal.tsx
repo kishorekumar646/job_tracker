@@ -74,7 +74,7 @@ interface Props {
 
 function formatExpiry(expiresAt: number | null): { label: string; color: string } {
   if (!expiresAt) return { label: 'No active session', color: 'text-gray-500' }
-  const ms = expiresAt * 1000 - Date.now()
+  const ms = expiresAt - Date.now()
   if (ms <= 0) return { label: 'Session expired', color: 'text-red-400' }
   const totalSecs = Math.floor(ms / 1000)
   const hours = Math.floor(totalSecs / 3600)

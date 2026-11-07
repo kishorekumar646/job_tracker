@@ -15,7 +15,13 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     COOKIE_SECURE: bool = False
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    # Auth settings from .env
+    JWT_SECRET_KEY: str = "changeme-replace-with-a-64-char-hex-secret"
+    JWT_ALGORITHM: str = "HS256"
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

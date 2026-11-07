@@ -18,7 +18,7 @@ export function useTokenExpiry() {
       return
     }
 
-    const delay = expiresAt * 1000 - Date.now() - WARN_BEFORE_MS
+    const delay = expiresAt - Date.now() - WARN_BEFORE_MS
 
     if (delay <= 0) {
       setShowWarning(true)

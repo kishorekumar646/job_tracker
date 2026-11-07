@@ -22,7 +22,7 @@ export function TokenExpiryBanner({ onRefresh, onDismiss, expiresAt }: Props) {
     if (!expiresAt) { setSecsLeft(null); return }
 
     function tick() {
-      setSecsLeft(Math.max(0, Math.floor(expiresAt! * 1000 - Date.now()) / 1000))
+      setSecsLeft(Math.max(0, Math.floor(expiresAt! - Date.now()) / 1000))
     }
     tick()
     const id = setInterval(tick, 1000)

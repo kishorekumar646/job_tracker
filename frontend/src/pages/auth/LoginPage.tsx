@@ -40,9 +40,10 @@ export function LoginPage() {
     try {
       await login(email.trim(), otp.trim())
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-        'Login failed. Check your email and OTP.'
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
+      const msg = Array.isArray(raw)
+        ? (raw[0] as { msg?: string })?.msg ?? 'Login failed.'
+        : (raw as string | undefined) ?? 'Login failed. Check your email and OTP.'
       setError(msg)
     } finally {
       setLoading(false)

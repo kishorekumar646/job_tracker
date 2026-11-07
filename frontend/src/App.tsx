@@ -5,6 +5,12 @@ import { LoginPage } from './pages/auth/LoginPage'
 import { SignupPage } from './pages/auth/SignupPage'
 import { ActivatePage } from './pages/auth/ActivatePage'
 import { JobDashboardPage } from './pages/JobDashboardPage'
+import { AdminPage } from './pages/AdminPage'
+import { AnalyzePage } from './pages/AnalyzePage'
+import { JobHistoryPage } from './pages/JobHistoryPage'
+import { AddApplicationPage } from './pages/AddApplicationPage'
+import { HealthPage } from './pages/HealthPage'
+import { RegressionPage } from './pages/RegressionPage'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { TokenExpiryBanner } from './components/ui/TokenExpiryBanner'
 import { OfflineBanner } from './components/ui/OfflineBanner'
@@ -56,6 +62,61 @@ function AppShell() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <JobDashboardPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Protected - Remaining pages */}
+        <Route path="/admin" element={
+          <ProtectedRoute adminOnly>
+            <AdminPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/analyze" element={
+          <ProtectedRoute>
+            <AnalyzePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/jobs" element={
+          <ProtectedRoute>
+            <JobHistoryPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/jobs/:id" element={
+          <ProtectedRoute>
+            <JobDashboardPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/applications" element={
+          <ProtectedRoute>
+            <JobHistoryPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/applications/new" element={
+          <ProtectedRoute>
+            <AddApplicationPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/applications/edit/:id" element={
+          <ProtectedRoute>
+            <AddApplicationPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/health" element={
+          <ProtectedRoute>
+            <HealthPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/regression" element={
+          <ProtectedRoute>
+            <RegressionPage />
           </ProtectedRoute>
         } />
 

@@ -11,9 +11,11 @@ interface Props {
   requiredRole?: string
   /** Permission key from GET /auth/me, e.g. 'regression.view'. Admins always pass. */
   requiredPermission?: string
+  /** Admin only route - redirects non-admins to dashboard */
+  adminOnly?: boolean
 }
 
-export function ProtectedRoute({ children, requiredRole, requiredPermission }: Props) {
+export function ProtectedRoute({ children, requiredRole, requiredPermission, adminOnly }: Props) {
   const { isAuthenticated, isLoading, user } = useAuthStore()
   const isOnline = useOnlineStore((s) => s.isOnline)
 
@@ -34,6 +36,7 @@ export function ProtectedRoute({ children, requiredRole, requiredPermission }: P
   if (!isAuthenticated) return <Navigate to="/login" replace />
   // A new account can sign in, but sees only the waiting screen until an admin approves it.
   if (user?.is_approved === false && user.role !== 'admin') return <AwaitingApproval />
+  if (adminOnly && user?.role !== 'admin') return <Navigate to="/dashboard" replace />
   if (requiredRole && user?.role !== requiredRole) return <Navigate to="/dashboard" replace />
   if (requiredPermission && !hasPermission(user, requiredPermission)) return <Navigate to="/dashboard" replace />
 

@@ -119,7 +119,7 @@ export function Header({ title, onOpenSettings }: Props) {
   const dotColor  = presence === 'online' ? 'bg-emerald-400' : presence === 'away' ? 'bg-amber-400' : 'bg-gray-500'
 
   // ── Session expiry warning ─────────────────────────────────────────────────
-  const sessionExpiring = expiresAt != null && (expiresAt * 1000 - Date.now()) < 5 * 60 * 1000
+  const sessionExpiring = expiresAt != null && (expiresAt - Date.now()) < 5 * 60 * 1000
 
   // ── Profile tooltip ───────────────────────────────────────────────────────
   const [profileHover, setProfileHover] = useState(false)
