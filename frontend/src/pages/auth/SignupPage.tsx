@@ -261,7 +261,7 @@ export function SignupPage() {
                   className="w-full"
                   size="lg"
                   loading={loading}
-                  disabled={!email.endsWith('@gmail.com') || !fullName.trim() || fullName.trim().length > 15}
+                  disabled={!email.endsWith('@gmail.com') || (fullName.trim().length > 15)}
                 >
                   Register
                 </Button>
