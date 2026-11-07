@@ -1,1 +1,0 @@
-"""Job Tracker backend application."""

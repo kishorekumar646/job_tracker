@@ -1,0 +1,729 @@
+{
+  "CS6100": {
+    "title": "Account Suspended",
+    "description": "Customer account is suspended.",
+    "category": "ACCOUNT_ERROR",
+    "subsystem": "Customer Account"
+  },
+
+  "CS1001": {
+    "title": "No connection / NTP unreachable",
+    "description": "Failed to contact an NTP server and set the time. Could be cabling, internet access, or configuration issue.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1002": {
+    "title": "Modem unable to connect to Internet",
+    "description": "Connection to the internet failed during FTI language selection step.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1003": {
+    "title": "Box unable to download software update",
+    "description": "Build image with wrong epoch version was loaded; upgrade step was skipped on FTI.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1004": {
+    "title": "Connection failed before config retrieval",
+    "description": "Internet connection failed before the box retrieved the config file.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1010": {
+    "title": "Traxis unavailable",
+    "description": "Traxis is unavailable or customer not found in Traxis.",
+    "category": "PROVISIONING_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1011": {
+    "title": "Provisioning failure - no URLs from ACS",
+    "description": "Provisioning failure — no URLs provided from ACS.",
+    "category": "PROVISIONING_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1020": {
+    "title": "STB unable to download software",
+    "description": "SW download failed — box cannot contact HE or HE does not recognise CPE ID.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1021": {
+    "title": "Manifest file download failure",
+    "description": "Manifest file download failure during FTI.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1022": {
+    "title": "Firmware file failed to download",
+    "description": "URL received from HE correctly but archive could not be downloaded.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1023": {
+    "title": "Failed to allocate disk space for firmware",
+    "description": "Failed to allocate disk space for the firmware file.",
+    "category": "HARDWARE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1025": {
+    "title": "Failed to write firmware to flash",
+    "description": "UI downloaded correctly but failed to decompress and store in flash — potential flash issue.",
+    "category": "HARDWARE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1026": {
+    "title": "Firmware validation failed",
+    "description": "Firmware file downloaded but failed to validate.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1027": {
+    "title": "Failed to apply config",
+    "description": "Incorrect country code in config; UI unable to load dictionaries.",
+    "category": "PROVISIONING_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1028": {
+    "title": "Download failed and version check failed",
+    "description": "FTI download failed and version check failed.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1150": {
+    "title": "HDD failure - failed to spin up",
+    "description": "Finalise installation — HDD failed to spin up.",
+    "category": "HARDWARE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1151": {
+    "title": "HDD failure - corrupted partition",
+    "description": "Finalise installation — corrupted PVR content partition or system data partition.",
+    "category": "HARDWARE_ERROR",
+    "subsystem": "FTI"
+  },
+  "CS1160": {
+    "title": "Empty channel list received",
+    "description": "BO component specified an empty channel list to the CPE.",
+    "category": "PROVISIONING_ERROR",
+    "subsystem": "FTI"
+  },
+
+  "CS100:70": {
+    "title": "Nagra message processing error",
+    "description": "Nagra conditional access message processing error.",
+    "category": "DRM_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2000": {
+    "title": "Invalid tuning locator",
+    "description": "Internal CPE error — invalid tuning locator; general catch-all for unrecognised errors.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2001": {
+    "title": "Tune locator not received from BO",
+    "description": "Locator not received from BO, or tune locator corrupted or incorrect.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2002": {
+    "title": "Session Manager not running",
+    "description": "Session Manager is not running due to internal CPE error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2004": {
+    "title": "Playout runtime error - signal lost",
+    "description": "QAM signal disappeared or cable unplugged.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2005": {
+    "title": "Buffering error - low bandwidth",
+    "description": "Low bandwidth caused buffering for longer than 15 seconds (IP channels only).",
+    "category": "NETWORK_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2010": {
+    "title": "Conditional access decryption failure",
+    "description": "Could not decrypt the stream — conditional access failure.",
+    "category": "DRM_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2012": {
+    "title": "IP channel failed - bad URL or content unavailable",
+    "description": "Bad URL to IP content or content not available on video backend.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2014": {
+    "title": "Session manager endpoint unavailable",
+    "description": "Endpoint (session manager) not available (IP channels only).",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2017": {
+    "title": "IP session timeout",
+    "description": "Timeout on starting IP session after 15 seconds (IP channels only).",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "LiveTV"
+  },
+  "CS2020": {
+    "title": "PIP disabled",
+    "description": "PIP operation was issued but PIP is disabled.",
+    "category": "ENVIRONMENT",
+    "subsystem": "LiveTV"
+  },
+  "CS2050": {
+    "title": "TV signal status unmeasurable",
+    "description": "TV signal status cannot be measured due to API errors.",
+    "category": "HARDWARE_ERROR",
+    "subsystem": "LiveTV"
+  },
+
+  "CS6000": {
+    "title": "BO connection problem - recording",
+    "description": "BO connection problem; recording-related request cannot be completed.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Local Harddisk"
+  },
+  "CS6001": {
+    "title": "BO connection problem - recording",
+    "description": "BO connection problem; recording-related request cannot be completed.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Local Harddisk"
+  },
+  "CS6002": {
+    "title": "BO connection problem - recording",
+    "description": "BO connection problem; recording-related request cannot be completed.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Local Harddisk"
+  },
+  "CS6030": {
+    "title": "BO connection problem - recording",
+    "description": "BO connection problem; recording-related request cannot be completed.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Local Harddisk"
+  },
+  "CS6031": {
+    "title": "BO connection problem / No HDD box in household",
+    "description": "BO connection problem or MRS — no HDD box in the household.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Local Harddisk / Multiroom"
+  },
+
+  "CS2201": {
+    "title": "STB on different network or subnet",
+    "description": "HDD-less box is on a different network or subnet than the HDD box.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Multiroom / Recordings"
+  },
+  "CS2202": {
+    "title": "Out-of-home latency detected",
+    "description": "RTT >= 7ms — box is probably outside the home network.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Multiroom / Recordings"
+  },
+
+  "CS9003": {
+    "title": "Servers unreachable - offline degraded mode",
+    "description": "Servers cannot be reached; box is in offline degraded mode with no metadata available.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9004": {
+    "title": "Modem disconnected - offline degraded mode",
+    "description": "Modem disconnected from Internet; box is in offline degraded mode.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9005": {
+    "title": "WiFi disconnected - offline degraded mode",
+    "description": "Disconnected over WiFi; box is in offline degraded mode.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9007": {
+    "title": "Internet disconnected - offline degraded mode",
+    "description": "Disconnected from Internet; box is in offline degraded mode.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9010": {
+    "title": "Network error",
+    "description": "Network connectivity error.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9031": {
+    "title": "Network connection request failed",
+    "description": "Network connection request failed.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9097": {
+    "title": "Network connection request failed",
+    "description": "Network connection request failed.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9910": {
+    "title": "Network error",
+    "description": "Network connectivity error.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9911": {
+    "title": "Network error",
+    "description": "Network connectivity error.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9993": {
+    "title": "Network error",
+    "description": "Network connectivity error.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9994": {
+    "title": "Network error",
+    "description": "Network connectivity error.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9995": {
+    "title": "Network error",
+    "description": "Network connectivity error.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9996": {
+    "title": "Network error",
+    "description": "Network connectivity error.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network"
+  },
+  "CS9000": {
+    "title": "Network error (DAWN)",
+    "description": "Network connectivity error (DAWN stack).",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network DAWN"
+  },
+  "CS9020": {
+    "title": "Network error (DAWN)",
+    "description": "Network connectivity error (DAWN stack).",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network DAWN"
+  },
+  "CS9051": {
+    "title": "Network error (DAWN)",
+    "description": "Network connectivity error (DAWN stack).",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network DAWN"
+  },
+  "CS9052": {
+    "title": "Network error (DAWN)",
+    "description": "Network connectivity error (DAWN stack).",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network DAWN"
+  },
+  "CS9053": {
+    "title": "Network error (DAWN)",
+    "description": "Network connectivity error (DAWN stack).",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network DAWN"
+  },
+  "CS9997": {
+    "title": "Network error (DAWN)",
+    "description": "Network connectivity error (DAWN stack).",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Network DAWN"
+  },
+
+  "CS5500": {
+    "title": "BO connection problem - NPR/PVR recording",
+    "description": "BO connection problem; NPR/PVR recording-related request cannot be completed.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "NPR & PVR"
+  },
+  "CS5600": {
+    "title": "BO connection error - NPR/PVR recording",
+    "description": "BO connection error; NPR/PVR recording-related request cannot be completed.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "NPR & PVR"
+  },
+
+  "CS2400": {
+    "title": "OTT app cannot be launched",
+    "description": "The OTT app cannot be launched or accessed.",
+    "category": "OTT_ERROR",
+    "subsystem": "OTT"
+  },
+  "CS2401": {
+    "title": "App store service not responding",
+    "description": "App store service is not responding.",
+    "category": "OTT_ERROR",
+    "subsystem": "OTT"
+  },
+  "CS2402": {
+    "title": "App launch failed - network session timeout",
+    "description": "App launch failed due to network session timeout.",
+    "category": "OTT_ERROR",
+    "subsystem": "OTT"
+  },
+
+  "CS2200": {
+    "title": "Stream decoding failed",
+    "description": "Local recording file is missing, internal CPE error, or general catch-all for unrecognised errors.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Recordings"
+  },
+  "CS2205": {
+    "title": "Buffering error (IP content) - recordings",
+    "description": "Low bandwidth caused buffering for longer than 15 seconds on IP content.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Recordings"
+  },
+  "CS2211": {
+    "title": "Session service down - recordings",
+    "description": "Session service is down or not available.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Recordings"
+  },
+  "CS2212": {
+    "title": "Recording TV content not found",
+    "description": "Bad URL to IP content or content not available on VSPP.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Recordings"
+  },
+  "CS2214": {
+    "title": "Session manager endpoint unavailable - recordings",
+    "description": "Endpoint (session manager) not available.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Recordings"
+  },
+  "CS2217": {
+    "title": "Recording playout timeout",
+    "description": "Timeout on starting IP session after 15 seconds.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Recordings"
+  },
+  "CS2218": {
+    "title": "DRM error - recordings",
+    "description": "DRM keys are missing or stream cannot be decoded.",
+    "category": "DRM_ERROR",
+    "subsystem": "Recordings"
+  },
+
+  "CS2500": {
+    "title": "Replay playback failed",
+    "description": "Internal CPE error — general catch-all for all unrecognised replay errors.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Replay"
+  },
+  "CS2505": {
+    "title": "In-home buffering > 15s due to slow WiFi",
+    "description": "Low bandwidth caused buffering for longer than 15 seconds.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Replay"
+  },
+  "CS2507": {
+    "title": "Trickplay failure",
+    "description": "Unable to use trick play actions: change speed, set position.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Replay"
+  },
+  "CS2511": {
+    "title": "Session service down - replay",
+    "description": "Session service is down or not available.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Replay"
+  },
+  "CS2512": {
+    "title": "Replay TV content not found",
+    "description": "Bad URL to IP content or content not available on VSPP.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Replay"
+  },
+  "CS2514": {
+    "title": "Session manager endpoint unavailable - replay",
+    "description": "Endpoint (session manager) not available.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Replay"
+  },
+  "CS2517": {
+    "title": "Replay playout timeout",
+    "description": "Timeout on starting IP session.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Replay"
+  },
+  "CS2518": {
+    "title": "DRM error - replay",
+    "description": "DRM keys are missing or stream cannot be decoded.",
+    "category": "DRM_ERROR",
+    "subsystem": "Replay"
+  },
+
+  "CS3500": {
+    "title": "Replay catalog error",
+    "description": "Replay catalog service error.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Replay Catalog"
+  },
+  "CS3510": {
+    "title": "Replay catalog error",
+    "description": "Replay catalog service error.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Replay Catalog"
+  },
+  "CS3520": {
+    "title": "Replay catalog error",
+    "description": "Replay catalog service error.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Replay Catalog"
+  },
+
+  "CS2100": {
+    "title": "Review buffer error",
+    "description": "Review buffer playback error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2105": {
+    "title": "Buffering error (IP content) - review buffer",
+    "description": "Low bandwidth caused buffering on IP content.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2107": {
+    "title": "Review buffer error",
+    "description": "Review buffer playback error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2111": {
+    "title": "Cannot get content URL - review buffer",
+    "description": "Failed to retrieve content URL for review buffer playback.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2112": {
+    "title": "Review buffer TV content not found",
+    "description": "Review buffer TV content not found.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2114": {
+    "title": "Review buffer session manager endpoint unavailable",
+    "description": "Review buffer session manager endpoint is not available.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2117": {
+    "title": "IP session timeout - review buffer",
+    "description": "IP session timeout for review buffer.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2118": {
+    "title": "DRM error (IP content) - review buffer",
+    "description": "DRM error on IP content in review buffer.",
+    "category": "DRM_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2120": {
+    "title": "Review buffer error",
+    "description": "Review buffer error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+  "CS2130": {
+    "title": "Review buffer error",
+    "description": "Review buffer error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "Review Buffer"
+  },
+
+  "CS4100": {
+    "title": "Saved area error",
+    "description": "Saved area service error.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Saved Area"
+  },
+  "CS4101": {
+    "title": "Saved area error",
+    "description": "Saved area service error.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Saved Area"
+  },
+
+  "CS8200": {
+    "title": "Search error",
+    "description": "Search service error.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Search"
+  },
+  "CS8400": {
+    "title": "Search backend not available",
+    "description": "Search backend is not available.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "Search"
+  },
+
+  "CS6200": {
+    "title": "Settings error",
+    "description": "Settings service error.",
+    "category": "ENVIRONMENT",
+    "subsystem": "Settings"
+  },
+  "CS6210": {
+    "title": "Settings error",
+    "description": "Settings service error.",
+    "category": "ENVIRONMENT",
+    "subsystem": "Settings"
+  },
+  "CS6211": {
+    "title": "Settings error",
+    "description": "Settings service error.",
+    "category": "ENVIRONMENT",
+    "subsystem": "Settings"
+  },
+  "CS6212": {
+    "title": "Settings error",
+    "description": "Settings service error.",
+    "category": "ENVIRONMENT",
+    "subsystem": "Settings"
+  },
+
+  "CS7503": {
+    "title": "Software version not available",
+    "description": "New software version is not available; software upgrade is cancelled.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "Software Update"
+  },
+  "CS7504": {
+    "title": "Software download trigger failed",
+    "description": "Software download trigger failed; software upgrade is cancelled.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "Software Update"
+  },
+  "CS7506": {
+    "title": "Forced software update install failed",
+    "description": "Forced software update failed; software upgrade is cancelled.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "Software Update"
+  },
+  "CS7507": {
+    "title": "Software update status unknown",
+    "description": "Unknown software update status — catch-all for unrecognised error status.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "Software Update"
+  },
+  "CS7508": {
+    "title": "Software update check failed",
+    "description": "Software update check failed.",
+    "category": "SOFTWARE_UPDATE_ERROR",
+    "subsystem": "Software Update"
+  },
+
+  "CS4200": {
+    "title": "Purchase failed - BO unreachable",
+    "description": "Purchase failed because BO could not be reached.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "TVOD"
+  },
+  "CS4205": {
+    "title": "Purchase failed - insufficient bandwidth for UHD",
+    "description": "Bandwidth is too low for UHD playback over IP.",
+    "category": "NETWORK_ERROR",
+    "subsystem": "TVOD"
+  },
+
+  "CS2300": {
+    "title": "VoD playback error",
+    "description": "VoD playback error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2301": {
+    "title": "VoD playback error",
+    "description": "VoD playback error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2305": {
+    "title": "VoD playback error",
+    "description": "VoD playback error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2307": {
+    "title": "VoD playback error",
+    "description": "VoD playback error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2311": {
+    "title": "VoD session service down",
+    "description": "VoD session service is down or not available.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2312": {
+    "title": "VoD content not found",
+    "description": "VoD content not found — bad URL or content unavailable on VSPP.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2314": {
+    "title": "VoD session manager endpoint unavailable",
+    "description": "VoD session manager endpoint is not available.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2317": {
+    "title": "VoD IP session timeout",
+    "description": "Timeout on starting IP session.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+  "CS2318": {
+    "title": "VoD error",
+    "description": "VoD playback error.",
+    "category": "PLAYOUT_ERROR",
+    "subsystem": "VoD"
+  },
+
+  "CS3200": {
+    "title": "VoD store content unavailable - BO parse error",
+    "description": "An error occurred during parsing of the BO response.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "VoD Store"
+  },
+  "CS3300": {
+    "title": "VoD store service unavailable",
+    "description": "BO could not be reached.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "VoD Store"
+  },
+  "CS3400": {
+    "title": "VoD store content unavailable - BO error",
+    "description": "BO returned an error.",
+    "category": "BACKEND_ERROR",
+    "subsystem": "VoD Store"
+  },
+
+  "CS6600": {
+    "title": "Voice service error",
+    "description": "Voice service error.",
+    "category": "ENVIRONMENT",
+    "subsystem": "Voice"
+  },
+  "CS6601": {
+    "title": "Voice service not available",
+    "description": "Voice service is not available — error from Nuance.",
+    "category": "ENVIRONMENT",
+    "subsystem": "Voice"
+  }
+}

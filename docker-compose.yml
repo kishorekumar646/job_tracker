@@ -1,0 +1,60 @@
+services:
+
+  # ── Backend (FastAPI + uvicorn) ──────────────────────────────────────────────
+  backend:
+    build:
+      context: ./rca_service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./rca_service/.env
+    environment:
+      # Override DB path to use the mounted volume
+      DATABASE_URL: sqlite+aiosqlite:////data/rca_auth.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      # Persist SQLite DB across restarts
+      - db_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/api/v1/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    # Give uvicorn time to run shutdown_background_tasks() before Docker
+    # escalates to SIGKILL.  Must be > --timeout-graceful-shutdown (20 s).
+    stop_grace_period: 30s
+
+  # ── Frontend (nginx serving the Vite build) ──────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_INSPECTORWEB_URL: https://oboinspector-ui-lab-lgi.obo.libgbl-lab.biz/inspectorweb/
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 10s
+
+  # ── Redis (JWT token blocklist) ───────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save "" --appendonly no
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  db_data:

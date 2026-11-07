@@ -1,49 +1,77 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuthStore } from "./stores/authStore";
-import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
-import Dashboard from "./pages/Dashboard";
-import JobsPage from "./pages/JobsPage";
-import JobDetailPage from "./pages/JobDetailPage";
-import ApplicationsPage from "./pages/ApplicationsPage";
-import SettingsPage from "./pages/SettingsPage";
-import AdminDashboard from "./pages/AdminDashboard";
-import LandingPage from "./pages/LandingPage";
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AdminRoute from "./components/AdminRoute";
+// Author: Kishore Kumar
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { LoginPage } from './pages/auth/LoginPage'
+import { SignupPage } from './pages/auth/SignupPage'
+import { ActivatePage } from './pages/auth/ActivatePage'
+import { JobDashboardPage } from './pages/JobDashboardPage'
+import { ProtectedRoute } from './components/layout/ProtectedRoute'
+import { TokenExpiryBanner } from './components/ui/TokenExpiryBanner'
+import { OfflineBanner } from './components/ui/OfflineBanner'
+import { useTokenExpiry } from './hooks/useTokenExpiry'
+import { useOnlineStatus } from './hooks/useOnlineStatus'
+import { useAuthStore } from './store/authStore'
+import { useTheme } from './hooks/useTheme'
 
-function App() {
-  const { user } = useAuthStore();
+function AppShell() {
+  const { showWarning, handleRefresh, handleDismiss, expiresAt } = useTokenExpiry()
+  const { isOnline, countdown, checking, retry } = useOnlineStatus()
+  const { isAuthenticated, isLoading } = useAuthStore()
+  const initAuth = useAuthStore((s) => s.initAuth)
+  useTheme()
+
+  useEffect(() => {
+    initAuth()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-950">
+        <svg className="animate-spin h-8 w-8 text-primary-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50 dark:from-gray-900 dark:to-indigo-950">
+    <>
+      <OfflineBanner isOnline={isOnline} countdown={countdown} checking={checking} onRetry={retry} />
+      {showWarning && (
+        <TokenExpiryBanner onRefresh={handleRefresh} onDismiss={handleDismiss} expiresAt={expiresAt} />
+      )}
       <Routes>
-        {/* Landing page for non-authenticated users */}
-        <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" />} />
+        {/* Root redirect - unauthenticated to login, authenticated to dashboard */}
+        <Route path="/" element={
+          <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+        } />
 
-        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
-        <Route path="/signup" element={!user ? <SignupPage /> : <Navigate to="/dashboard" />} />
+        {/* Public */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/activate" element={<ActivatePage />} />
 
-        <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/jobs" element={<JobsPage />} />
-            <Route path="/jobs/:id" element={<JobDetailPage />} />
-            <Route path="/applications" element={<ApplicationsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-        </Route>
+        {/* Protected - Job Portal Dashboard */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <JobDashboardPage />
+          </ProtectedRoute>
+        } />
 
-        <Route element={<AdminRoute />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-        </Route>
-
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Catch-all - redirect to appropriate page */}
+        <Route path="*" element={
+          <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+        } />
       </Routes>
-    </div>
-  );
+    </>
+  )
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
+    </BrowserRouter>
+  )
+}
