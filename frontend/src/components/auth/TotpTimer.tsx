@@ -6,12 +6,8 @@ const R = 10
 const CIRC = 2 * Math.PI * R
 
 function getState() {
-  // +1000 ms shifts our clock 1 second forward to match the authenticator app,
-  // which runs on the phone's NTP clock (1 second ahead of this browser's clock).
-  const ms = Date.now() + 1000
-  // Integer countdown for the label (30 → 1)
+  const ms = Date.now()
   const secsLeft = PERIOD - (Math.floor(ms / 1000) % PERIOD)
-  // Fractional elapsed position for the arc (0.0 → 1.0 continuously)
   const elapsedFrac = (ms / 1000 % PERIOD) / PERIOD
   return { secsLeft, elapsedFrac }
 }

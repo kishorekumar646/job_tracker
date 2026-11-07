@@ -120,7 +120,7 @@ async def totp_qr(email: Annotated[str, Query()], db: AsyncSession = Depends(get
 
 
 @router.post("/activate", response_model=dict)
-async def activate(email: str = Body(..., embed=True), otp: str = Body(..., embed=True), db: AsyncSession = Depends(get_async_db)):
+async def activate(email: Annotated[str, Form()], otp: Annotated[str, Form()], db: AsyncSession = Depends(get_async_db)):
     """Activate account using TOTP code."""
     user = await get_user_by_email(db, email)
     if not user:
@@ -160,7 +160,7 @@ async def activate(email: str = Body(..., embed=True), otp: str = Body(..., embe
 
 
 @router.post("/login", response_model=dict)
-async def login(email: str = Body(..., embed=True), otp: str = Body(..., embed=True), response: Response = None, db: AsyncSession = Depends(get_async_db)):
+async def login(email: Annotated[str, Form()], otp: Annotated[str, Form()], response: Response = None, db: AsyncSession = Depends(get_async_db)):
     """Login with email and TOTP code, set HTTP-only cookies."""
     user = await get_user_by_email(db, email)
     if not user or not user.is_approved:

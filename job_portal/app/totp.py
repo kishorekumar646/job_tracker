@@ -15,8 +15,8 @@ except ImportError:
 
 
 def generate_totp_secret() -> str:
-    """Generate a random TOTP secret."""
-    return secrets.token_hex(20)
+    """Generate a random TOTP secret (base32-encoded for pyotp compatibility)."""
+    return pyotp.random_base32()
 
 
 def generate_qr_code_data(email: str, secret: str, issuer: str = "JobPortal") -> str:
@@ -31,7 +31,7 @@ def generate_qr_code_data(email: str, secret: str, issuer: str = "JobPortal") ->
         return ""
 
 
-def verify_totp(secret: str, otp: str, window: int = 1) -> bool:
+def verify_totp(secret: str, otp: str, window: int = 2) -> bool:
     """Verify a TOTP code."""
     if not TOTP_AVAILABLE:
         return False
