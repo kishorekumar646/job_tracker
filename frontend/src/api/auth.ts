@@ -16,10 +16,14 @@ export async function signup(
   fullName?: string,
   dateOfBirth?: string
 ): Promise<{ message: string; user: { id: number; email: string; name: string | null; qr_code: string; totp_secret: string } }> {
+  const params = new URLSearchParams()
+  params.append('email', email.trim())
+  if (fullName?.trim()) params.append('full_name', fullName.trim())
+  if (dateOfBirth?.trim()) params.append('date_of_birth', dateOfBirth.trim())
   const { data } = await axios.post<{
     message: string
     user: { id: number; email: string; name: string | null; qr_code: string; totp_secret: string }
-  }>('/api/v1/auth/signup', toFormData({ email, name: fullName ?? undefined, date_of_birth: dateOfBirth ?? undefined }), {
+  }>('/api/v1/auth/signup', params.toString(), {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
   return data
