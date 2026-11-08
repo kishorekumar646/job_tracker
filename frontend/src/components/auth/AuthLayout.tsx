@@ -15,7 +15,17 @@ const ANIM_CSS = `
   from { opacity: 0; transform: translateX(16px); }
   to   { opacity: 1; transform: translateX(0);    }
 }
+@keyframes bgPulse {
+  0%, 100% { background: radial-gradient(circle at 50% 50%, #1e40af 0%, #030712 70%); }
+  50% { background: radial-gradient(circle at 50% 50%, #3b82f6 0%, #030712 70%); }
+}
+@keyframes shieldFlash {
+  0%, 100% { transform: scale(1) rotate(0deg);   filter: drop-shadow(0 0 0px var(--color-primary-hex-500)); }
+  30%       { transform: scale(1.12) rotate(-8deg); filter: drop-shadow(0 0 6px var(--color-primary-hex-400)); }
+  60%       { transform: scale(1.08) rotate(6deg);  filter: drop-shadow(0 0 10px var(--color-primary-hex-300)); }
+}
 .auth-text-shadow { text-shadow: 0 1px 14px rgba(0,0,0,1), 0 0 28px rgba(0,0,0,0.9); }
+.auth-bg-pulse { animation: bgPulse 6s ease-in-out infinite; }
 `
 
 const FEATURES = [
@@ -33,7 +43,7 @@ const STATS = [
 
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen overflow-hidden auth-bg-pulse">
       <style>{ANIM_CSS}</style>
 
       {/* Left branding panel (lg+) */}

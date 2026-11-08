@@ -77,7 +77,7 @@ export function LoginPage() {
         ) : (
           <div style={{ animation: 'authCardEnter 0.45s ease-out both' }}>
             <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 animate-shieldFlash">
                 <ShieldCheck className="h-7 w-7 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-50">Job Portal</h2>
