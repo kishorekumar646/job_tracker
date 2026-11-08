@@ -9,6 +9,7 @@ import { AdminPage } from './pages/AdminPage'
 import { AnalyzePage } from './pages/AnalyzePage'
 import { JobHistoryPage } from './pages/JobHistoryPage'
 import { AddApplicationPage } from './pages/AddApplicationPage'
+import { AutoApplyPage } from './pages/AutoApplyPage'
 import { HealthPage } from './pages/HealthPage'
 import { RegressionPage } from './pages/RegressionPage'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
@@ -92,7 +93,7 @@ function AppShell() {
 
         <Route path="/applications" element={
           <ProtectedRoute>
-            <JobHistoryPage />
+            <AutoApplyPage />
           </ProtectedRoute>
         } />
 
