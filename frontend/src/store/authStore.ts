@@ -25,14 +25,14 @@ const useAuthStore = create<AuthState>((set) => ({
   setSession(incoming: UserProfile, expiresAt: number) {
     setSettingsUser(incoming.email)
     localStorage.setItem('expires_at', String(expiresAt))
-    sessionStorage.setItem('job_user', JSON.stringify(incoming))
+    localStorage.setItem('job_user', JSON.stringify(incoming))
     set({ user: incoming, expiresAt, isAuthenticated: true })
   },
 
   clearAuth() {
     setSettingsUser('guest')
     localStorage.removeItem('expires_at')
-    sessionStorage.removeItem('job_user')
+    localStorage.removeItem('job_user')
     set({ user: null, expiresAt: null, isAuthenticated: false, isLoading: false })
   },
 
@@ -61,7 +61,7 @@ const useAuthStore = create<AuthState>((set) => ({
         name: profile.full_name ?? undefined,
         full_name: profile.full_name ?? undefined,
       }
-      sessionStorage.setItem('job_user', JSON.stringify(user))
+      localStorage.setItem('job_user', JSON.stringify(user))
 
       let expiresAt: number | null = null
       const storedExpiry = localStorage.getItem('expires_at')
@@ -81,7 +81,7 @@ const useAuthStore = create<AuthState>((set) => ({
       // Network error = server temporarily down. Fall back to cached user so the
       // offline banner can handle recovery without redirecting to login.
       const isNetworkError = !(err as { response?: unknown })?.response
-      const cachedUserStr = sessionStorage.getItem('job_user')
+      const cachedUserStr = localStorage.getItem('job_user')
       if (isNetworkError && cachedUserStr) {
         try {
           const cachedUser = JSON.parse(cachedUserStr) as UserProfile
@@ -92,7 +92,7 @@ const useAuthStore = create<AuthState>((set) => ({
       }
       setSettingsUser('guest')
       localStorage.removeItem('expires_at')
-      sessionStorage.removeItem('job_user')
+      localStorage.removeItem('job_user')
       set({ user: null, expiresAt: null, isAuthenticated: false, isLoading: false })
     }
   },
