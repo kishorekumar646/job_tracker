@@ -68,7 +68,7 @@ const useJobApplicationsStore = create<JobApplicationsState>((set) => ({
       applications: [...state.applications, {
         id: oppId,
         company: state.opportunities.find(o => o.id === oppId)?.company || '',
-        job_title: state.opportunities.find(o => o.id === oppId)?.company || '',
+        job_title: state.opportunities.find(o => o.id === oppId)?.job_title || '',
         location: state.opportunities.find(o => o.id === oppId)?.location || '',
         status: 'Applied',
         applied_date: new Date().toISOString(),
