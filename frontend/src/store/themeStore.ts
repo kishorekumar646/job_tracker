@@ -1,64 +1,50 @@
 // Author: Kishore Kumar
 import { create } from 'zustand'
-import { AppTheme, getSettings } from '../utils/settings'
+import { AppTheme, getSettings, saveSettings } from '../utils/settings'
+
+// Tailwind palette shades 50 → 950 as RGB channels (drives the `brand` colour scale).
+const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
+const PALETTES: Record<AppTheme, string[]> = {
+  gold: ['252 249 242', '247 236 215', '240 220 181', '230 201 151', '213 178 120', '148 111 58', '145 105 48', '116 82 37', '88 65 34', '60 47 28', '34 28 20'],
+  indigo: ['238 242 255', '224 231 255', '199 210 254', '165 180 252', '129 140 248', '99 102 241', '79 70 229', '67 56 202', '55 48 163', '49 46 129', '30 27 75'],
+  violet: ['245 243 255', '237 233 254', '221 214 254', '196 181 253', '167 139 250', '139 92 246', '124 58 237', '109 40 217', '91 33 182', '76 29 149', '46 16 101'],
+  teal: ['240 253 250', '204 251 241', '153 246 228', '94 234 212', '45 212 191', '20 184 166', '13 148 136', '15 118 110', '17 94 89', '19 78 74', '4 47 46'],
+  rose: ['255 241 242', '255 228 230', '254 205 211', '253 164 175', '251 113 133', '244 63 94', '225 29 72', '190 18 60', '159 18 57', '136 19 55', '76 5 25'],
+}
+
+export const THEMES: { id: AppTheme; label: string; swatch: string }[] = [
+  { id: 'gold', label: 'Champagne', swatch: '#e6c997' },
+  { id: 'indigo', label: 'Indigo', swatch: '#6366f1' },
+  { id: 'violet', label: 'Violet', swatch: '#8b5cf6' },
+  { id: 'teal', label: 'Teal', swatch: '#14b8a6' },
+  { id: 'rose', label: 'Rose', swatch: '#f43f5e' },
+]
+
+export function injectThemeVars(theme: AppTheme) {
+  const vars = SHADES.map((n, i) => `--brand-${n}:${PALETTES[theme][i]};`).join('')
+  document.getElementById('jp-theme')?.remove()
+  const el = document.createElement('style')
+  el.id = 'jp-theme'
+  el.textContent = `:root{${vars}}`
+  document.head.appendChild(el)
+}
 
 interface ThemeState {
   theme: AppTheme
+  load: () => void
   setTheme: (t: AppTheme) => void
 }
 
 export const useThemeStore = create<ThemeState>((set) => ({
-  theme: getSettings().theme ?? 'indigo',
-  setTheme: (theme) => set({ theme }),
+  theme: getSettings().theme,
+  load: () => {
+    const theme = getSettings().theme
+    injectThemeVars(theme)
+    set({ theme })
+  },
+  setTheme: (theme) => {
+    saveSettings({ theme })
+    injectThemeVars(theme)
+    set({ theme })
+  },
 }))
-
-const THEME_VARS: Record<AppTheme, string> = {
-  indigo: `
-    --color-primary-300:165 180 252;--color-primary-400:129 140 248;
-    --color-primary-500:99 102 241;--color-primary-600:79 70 229;
-    --color-primary-700:67 56 202;--color-primary-800:55 48 163;
-    --color-primary-900:49 46 129;--color-primary-950:30 27 75;
-    --color-primary-hex-300:#a5b4fc;--color-primary-hex-400:#818cf8;
-    --color-primary-hex-500:#6366f1;--color-primary-hex-600:#4f46e5;
-    --color-primary-rail:#2e2f6e;--color-primary-signal:#c7d2fe;`,
-  violet: `
-    --color-primary-300:196 181 253;--color-primary-400:167 139 250;
-    --color-primary-500:139 92 246;--color-primary-600:124 58 237;
-    --color-primary-700:109 40 217;--color-primary-800:91 33 182;
-    --color-primary-900:76 29 149;--color-primary-950:46 16 101;
-    --color-primary-hex-300:#c4b5fd;--color-primary-hex-400:#a78bfa;
-    --color-primary-hex-500:#8b5cf6;--color-primary-hex-600:#7c3aed;
-    --color-primary-rail:#3b1f6e;--color-primary-signal:#ddd6fe;`,
-  teal: `
-    --color-primary-300:94 234 212;--color-primary-400:45 212 191;
-    --color-primary-500:20 184 166;--color-primary-600:13 148 136;
-    --color-primary-700:15 118 110;--color-primary-800:17 94 89;
-    --color-primary-900:19 78 74;--color-primary-950:4 47 46;
-    --color-primary-hex-300:#5eead4;--color-primary-hex-400:#2dd4bf;
-    --color-primary-hex-500:#14b8a6;--color-primary-hex-600:#0d9488;
-    --color-primary-rail:#0f3f3c;--color-primary-signal:#99f6e4;`,
-  rose: `
-    --color-primary-300:253 164 175;--color-primary-400:251 113 133;
-    --color-primary-500:244 63 94;--color-primary-600:225 29 72;
-    --color-primary-700:190 18 60;--color-primary-800:159 18 57;
-    --color-primary-900:136 19 55;--color-primary-950:76 5 25;
-    --color-primary-hex-300:#fda4af;--color-primary-hex-400:#fb7185;
-    --color-primary-hex-500:#f43f5e;--color-primary-hex-600:#e11d48;
-    --color-primary-rail:#5a1028;--color-primary-signal:#fecdd3;`,
-}
-
-export function injectThemeVars(theme: AppTheme) {
-  // Always remove and re-append so this tag is last in <head> and wins
-  // over any Vite-injected CSS (e.g. index.css :root block).
-  document.getElementById('rca-theme')?.remove()
-  const el = document.createElement('style')
-  el.id = 'rca-theme'
-  el.textContent = `:root{${THEME_VARS[theme]}}`
-  document.head.appendChild(el)
-}
-
-export function getPrimaryColor(shade: '300' | '400' | '500' | '600') {
-  return getComputedStyle(document.documentElement)
-    .getPropertyValue(`--color-primary-hex-${shade}`)
-    .trim()
-}

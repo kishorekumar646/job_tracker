@@ -1,23 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <!-- Dark rounded background -->
-  <rect width="24" height="24" rx="5" fill="#0d1117"/>
-  <!-- Lens body fill -->
-  <rect x="8" y="5" width="4" height="8" rx="1" fill="#1e3a8a"/>
-  <!-- Microscope strokes -->
-  <g stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Eyepiece crossbar -->
-    <path d="M8 2h4"/>
-    <!-- Eyepiece stem -->
-    <path d="M10 2v3"/>
-    <!-- Optical tube -->
-    <rect x="8" y="5" width="4" height="8" rx="1"/>
-    <!-- Tube-to-stage connector -->
-    <path d="M10 13v3"/>
-    <!-- Stage plate -->
-    <path d="M5 16h14"/>
-    <!-- Support pillar -->
-    <path d="M15 16v5"/>
-    <!-- Base foot -->
-    <path d="M4 21h16"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#g)"/>
+  <path d="M9 21.5 22.5 9.5l-3 13-4-3.5-2.5 3.5-.5-4.5L9 21.5Z" fill="#fff"/>
 </svg>

@@ -1,52 +1,35 @@
 """
 Author: Kishore Kumar
-Promote a user to the admin role.
-
-Usage:
-    python tools/make_admin.py <email>
-
-Run from the rca_service/ directory. The user must have already signed up
-and activated their account before running this script.
+Promote an existing user to admin:  python tools/make_admin.py you@gmail.com
 """
-import sqlite3
+
+import asyncio
 import sys
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "rca_auth.db"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from sqlalchemy import select  # noqa: E402
+
+from app.database import async_session_factory  # noqa: E402
+from app.models import User  # noqa: E402
 
 
-def make_admin(email: str) -> None:
-    email = email.strip().lower()
-    if not DB_PATH.exists():
-        print(f"Database not found at {DB_PATH}")
-        sys.exit(1)
-
-    with sqlite3.connect(DB_PATH) as conn:
-        row = conn.execute(
-            "SELECT id, role, is_active FROM users WHERE email = ?", (email,)
-        ).fetchone()
-
-        if not row:
-            print(f"No account found for {email}. Sign up and activate first.")
-            sys.exit(1)
-
-        user_id, current_role, is_active = row
-
-        if not is_active:
-            print(f"Account {email} is not activated yet. Activate it first.")
-            sys.exit(1)
-
-        if current_role == "admin":
-            print(f"{email} is already an admin.")
-            sys.exit(0)
-
-        # Admins are never waiting for approval.
-        conn.execute("UPDATE users SET role = 'admin', is_approved = 1 WHERE id = ?", (user_id,))
-        print(f"Done — {email} is now an admin. Log out and back in for the change to take effect.")
+async def main(email: str) -> int:
+    async with async_session_factory() as db:
+        user = await db.scalar(select(User).where(User.email == email.lower()))
+        if not user:
+            print(f"No user with email {email}. Sign up and activate first.")
+            return 1
+        user.role = "admin"
+        user.is_admin = True
+        await db.commit()
+        print(f"{user.email} is now an admin. Sign out and in again to pick up the new role.")
+        return 0
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python tools/make_admin.py <email>")
-        sys.exit(1)
-    make_admin(sys.argv[1])
+        print("usage: python tools/make_admin.py <email>")
+        sys.exit(2)
+    sys.exit(asyncio.run(main(sys.argv[1])))

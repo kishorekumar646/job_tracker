@@ -1,47 +1,72 @@
-"""Authentication manager with JWT token handling."""
+"""
+Author: Kishore Kumar
+JWT and TOTP helpers.
+"""
 
-import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from passlib.context import CryptContext
+import uuid
+
 import jwt
+import base64
+import io
+
+import pyotp
+import qrcode
+
+from .database import settings
 
 
 class AuthManager:
-    def __init__(self):
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    @staticmethod
+    def new_totp_secret() -> str:
+        return pyotp.random_base32()
 
-    def hash_password(self, password: str) -> str:
-        return self.pwd_context.hash(password)
+    @staticmethod
+    def provisioning_uri(email: str, secret: str) -> str:
+        return pyotp.TOTP(secret).provisioning_uri(name=email, issuer_name="JobPilot")
 
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return self.pwd_context.verify(plain_password, hashed_password)
+    @staticmethod
+    def qr_data_uri(uri: str) -> str:
+        buf = io.BytesIO()
+        qrcode.make(uri).save(buf, format="PNG")
+        return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
-    def create_access_token(self, user_id: str, role: str = "user", expires_delta: Optional[timedelta] = None) -> str:
-        from .database import settings
-        if expires_delta is None:
-            expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode = {
-            "sub": user_id,
+    @staticmethod
+    def verify_totp(secret: Optional[str], otp: str) -> bool:
+        if not secret:
+            return False
+        try:
+            return pyotp.TOTP(secret).verify(otp, valid_window=1)
+        except Exception:
+            return False
+
+    def _encode(self, user_id: int, token_type: str, expires: timedelta, role: str = "user") -> str:
+        now = datetime.now(timezone.utc)
+        payload = {
+            "sub": str(user_id),
             "role": role,
-            "exp": datetime.utcnow() + expires_delta,
+            "type": token_type,
+            "jti": uuid.uuid4().hex,
+            "iat": now,
+            "exp": now + expires,
         }
-        return jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
+        return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-    def create_refresh_token(self, user_id: str, expires_delta: Optional[timedelta] = None) -> str:
-        from .database import settings
-        if expires_delta is None:
-            expires_delta = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
-        to_encode = {"sub": user_id, "exp": datetime.utcnow() + expires_delta}
-        return jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
+    def create_access_token(self, user_id: int, role: str = "user") -> str:
+        return self._encode(user_id, "access", timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES), role)
+
+    def create_refresh_token(self, user_id: int) -> str:
+        return self._encode(user_id, "refresh", timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES))
 
     def verify_token(self, token: str, token_type: str = "access") -> Optional[dict]:
-        from .database import settings
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            return payload
+            payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         except jwt.PyJWTError:
             return None
+        if payload.get("type") != token_type:
+            return None
+        return payload
 
 
 auth_manager = AuthManager()

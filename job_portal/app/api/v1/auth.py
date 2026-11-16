@@ -1,285 +1,330 @@
 """
-Authentication routes.
+Author: Kishore Kumar
+Authentication routes, mounted at ``/api/v1/auth``.
 
-Mounted at ``/api/v1/auth`` by ``app/main.py``.
-
-Flow:
-    POST /auth/signup   → register account, get QR URL
-    GET  /auth/totp/qr  → download QR PNG for authenticator app
-    POST /auth/activate  → verify first TOTP code, activate account
-    POST /auth/login      → verify TOTP code, receive access + refresh tokens (HttpOnly cookies)
-    POST /auth/refresh    → rotate tokens using a valid refresh token (cookie)
-    POST /auth/logout     → revoke all sessions, clear cookies
+    POST /auth/signup    create an inactive account, returns the authenticator QR code
+    POST /auth/activate  verify the first 6-digit code and activate (then sign in)
+    POST /auth/login     email + 6-digit authenticator code, sets HttpOnly cookies
+    POST /auth/refresh   rotate tokens from the refresh cookie
+    POST /auth/logout    revoke the session and clear cookies
+    GET  /auth/me        current user
+    GET  /auth/session   current user and cookie expiry timestamps (no tokens)
+    PATCH /auth/me       update display name
 """
-from __future__ import annotations
 
 import time
-from collections import defaultdict
+import logging
 from datetime import datetime
-from typing import Annotated, Optional
+from collections import defaultdict, deque
+from typing import Optional
 
-from fastapi import APIRouter, Depends, Form, Body, HTTPException, Request, Response, Cookie, Query
-from fastapi import status as fastapi_status
-from fastapi.responses import Response as FastAPIResponse
-from sqlalchemy import select
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from sqlalchemy import delete, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database import get_async_db, Settings
-from ...models import User
-from ...schemas import UserCreate
-from ...crud import (
-    create_user, get_user_by_email, get_user_by_id,
-    update_user_totp, activate_user
-)
 from ...auth import auth_manager
-from ...totp import generate_totp_secret, verify_totp, TOTP_AVAILABLE
-
-settings = Settings()
+from ...database import get_async_db, settings
+from ...deps import get_current_user
+from ...models import JobPreference, Passkey, User, UserProfile
+from ...services import email_verification as ev
+from ...services import passkeys as pk
+from ...schemas import ActivationResponse, AuthResponse, EmailCodeRequest, EmailSendResult, NameUpdate, OtpRequest, PasskeyCode, PasskeyFinish, PasskeyOut, SignupRequest, SignupResponse, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Rate limiter (10 req/min per IP)
-_RATE_LIMIT = 10
-_RATE_WINDOW = 60
-_rate_counters: dict[str, tuple[int, float]] = defaultdict(lambda: (0, 0.0))
+_ATTEMPT_LIMIT = 10
+_ATTEMPT_WINDOW = 60
+_attempts: dict[str, deque] = defaultdict(deque)
 
 
-def _check_rate_limit(request: Request) -> None:
-    ip = request.client.host if request.client else "unknown"
-    count, window_start = _rate_counters[ip]
+def _rate_limit(request: Request, bucket: str) -> None:
+    """Sliding-window limiter per client IP and endpoint."""
+    key = f"{bucket}:{request.client.host if request.client else 'unknown'}"
     now = time.monotonic()
-    if now - window_start >= _RATE_WINDOW:
-        _rate_counters[ip] = (1, now)
-    else:
-        count += 1
-        _rate_counters[ip] = (count, window_start)
-        if count > _RATE_LIMIT:
-            raise HTTPException(
-                status_code=fastapi_status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many requests — please wait before trying again.",
-            )
+    q = _attempts[key]
+    while q and now - q[0] > _ATTEMPT_WINDOW:
+        q.popleft()
+    if len(q) >= _ATTEMPT_LIMIT:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many attempts. Please wait a minute.")
+    q.append(now)
 
 
-def _validate_email(email: str) -> str:
-    email = email.strip().lower()
-    if not email.endswith("@gmail.com"):
-        raise HTTPException(status_code=fastapi_status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Only @gmail.com email addresses are allowed.")
-    return email
+def _set_cookie(response: Response, key: str, value: str, max_age: int) -> None:
+    response.set_cookie(
+        key=key, value=value, httponly=True, secure=settings.COOKIE_SECURE,
+        samesite="lax", max_age=max_age, path="/",
+    )
 
 
-@router.post("/signup", status_code=fastapi_status.HTTP_201_CREATED)
-async def signup(
-    email: Annotated[str, Form()],
-    full_name: Annotated[Optional[str], Form()] = None,
-    date_of_birth: Annotated[Optional[str], Form()] = None,
+async def _issue_session(response: Response, user: User, db: AsyncSession) -> AuthResponse:
+    response.headers["Cache-Control"] = "no-store"
+    access = auth_manager.create_access_token(user.id, user.role)
+    refresh = auth_manager.create_refresh_token(user.id)
+    user.refresh_token = refresh
+    await db.commit()
+    _set_cookie(response, "access_token", access, settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    _set_cookie(response, "refresh_token", refresh, settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60)
+    return AuthResponse(
+        user=UserOut.model_validate(user),
+        expires_at=auth_manager.verify_token(access)["exp"] * 1000,
+        refresh_expires_at=auth_manager.verify_token(refresh, "refresh")["exp"] * 1000,
+        server_time=int(time.time() * 1000),
+    )
+
+
+@router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
+async def signup(body: SignupRequest, request: Request, db: AsyncSession = Depends(get_async_db)):
+    _rate_limit(request, "signup")
+    email = body.email.lower()
+    user = await db.scalar(select(User).where(User.email == email))
+    if user and user.is_approved:
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists. Please sign in.")
+
+    # A never-activated account is re-issued a fresh secret so it can't be squatted.
+    secret = auth_manager.new_totp_secret()
+    if user is None:
+        user = User(email=email, is_approved=False)
+        user.profile = UserProfile(skills=[])
+        user.preferences = JobPreference(job_titles=[], locations=[], job_types=[])
+        db.add(user)
+    user.name = body.full_name
+    user.date_of_birth = body.date_of_birth.isoformat()
+    user.totp_secret = secret
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists. Please sign in.")
+
+    uri = auth_manager.provisioning_uri(email, secret)
+    return SignupResponse(
+        message="Scan the QR code with your authenticator app, then enter the 6-digit code to activate.",
+        email=email, totp_secret=secret, otpauth_url=uri, qr_code=auth_manager.qr_data_uri(uri),
+    )
+
+
+@router.post("/activate", response_model=ActivationResponse)
+async def activate(body: OtpRequest, request: Request, db: AsyncSession = Depends(get_async_db)):
+    _rate_limit(request, "activate")
+    user = await db.scalar(select(User).where(User.email == body.email.lower()))
+    if not user or user.is_approved or not auth_manager.verify_totp(user.totp_secret, body.otp):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired code")
+    user.is_approved = True
+    await db.commit()
+    return ActivationResponse(message="Account activated. You can now sign in.", user=UserOut.model_validate(user))
+
+
+@router.post("/login", response_model=AuthResponse)
+async def login(
+    body: OtpRequest, request: Request, response: Response, db: AsyncSession = Depends(get_async_db)
+):
+    _rate_limit(request, "login")
+    user = await db.scalar(select(User).where(User.email == body.email.lower()))
+    if not user or not user.is_approved or not auth_manager.verify_totp(user.totp_secret, body.otp):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or authenticator code")
+    if not user.is_active:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This account has been deactivated")
+    return await _issue_session(response, user, db)
+
+
+def _confirm_device_change(user: User, body: PasskeyCode, request: Request) -> None:
+    _rate_limit(request, "passkey-change")
+    if not user.is_approved:
+        raise HTTPException(403, "Activate your account first")
+    if not auth_manager.verify_totp(user.totp_secret, body.otp):
+        raise HTTPException(400, "Invalid authenticator code")
+
+
+@router.get("/passkeys", response_model=list[PasskeyOut])
+async def list_passkeys(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+    return (await db.scalars(select(Passkey).where(Passkey.user_id == user.id).order_by(Passkey.id))).all()
+
+
+@router.post("/passkeys/register/options")
+async def passkey_register_options(
+    body: PasskeyCode, request: Request,
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db),
+):
+    _confirm_device_change(user, body, request)
+    keys = list((await db.scalars(select(Passkey).where(Passkey.user_id == user.id))).all())
+    return await pk.registration_options(db, user, keys)
+
+
+@router.post("/passkeys/register/verify", response_model=PasskeyOut)
+async def passkey_register_verify(
+    body: PasskeyFinish, request: Request,
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db),
+):
+    _rate_limit(request, "passkey-register")
+    challenge = await pk.consume(db, body.challenge, "register", user.id)
+    result = pk.verify_registration(body.credential, challenge)
+    key = Passkey(
+        user_id=user.id, name=body.name.strip() or "My device",
+        credential_id=pk.bytes_to_base64url(result.credential_id),
+        public_key=result.credential_public_key, sign_count=result.sign_count,
+    )
+    db.add(key)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(409, "This device is already registered")
+    return key
+
+
+@router.delete("/passkeys/{key_id}", status_code=204)
+async def remove_passkey(
+    key_id: int, body: PasskeyCode, request: Request,
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db),
+):
+    _confirm_device_change(user, body, request)
+    result = await db.execute(delete(Passkey).where(Passkey.id == key_id, Passkey.user_id == user.id))
+    if not result.rowcount:
+        raise HTTPException(404, "Device not found")
+    await db.commit()
+
+
+@router.post("/passkeys/login/options")
+async def passkey_login_options(request: Request, db: AsyncSession = Depends(get_async_db)):
+    _rate_limit(request, "passkey-login-options")
+    return await pk.authentication_options(db)
+
+
+@router.post("/passkeys/login/verify", response_model=AuthResponse)
+async def passkey_login_verify(
+    body: PasskeyFinish, request: Request, response: Response, db: AsyncSession = Depends(get_async_db),
+):
+    _rate_limit(request, "passkey-login")
+    challenge = await pk.consume(db, body.challenge, "login")
+    credential_id = body.credential.get("id")
+    key = await db.scalar(select(Passkey).where(Passkey.credential_id == credential_id)) if isinstance(credential_id, str) else None
+    user = await db.get(User, key.user_id) if key else None
+    if not key or not user or not user.is_active or not user.is_approved:
+        raise HTTPException(401, "Device sign-in is unavailable. Use your authenticator code.")
+    credential_response = body.credential.get("response")
+    if not isinstance(credential_response, dict) or credential_response.get("userHandle") != pk.bytes_to_base64url(str(user.id).encode()):
+        raise HTTPException(401, "Device sign-in could not be verified")
+    result = pk.verify_authentication(body.credential, challenge, key)
+    changed = await db.execute(update(Passkey).where(
+        Passkey.id == key.id, Passkey.sign_count == key.sign_count,
+    ).values(sign_count=result.new_sign_count))
+    if not changed.rowcount:
+        raise HTTPException(401, "Device sign-in changed. Please try again.")
+    return await _issue_session(response, user, db)
+
+
+@router.post("/refresh", response_model=AuthResponse)
+async def refresh(
+    response: Response,
+    refresh_token: Optional[str] = Cookie(None),
     db: AsyncSession = Depends(get_async_db),
 ):
-    """Register a new user with TOTP-based authentication."""
-    email = _validate_email(email)
-    existing_user = await get_user_by_email(db, email)
-    if existing_user:
-        raise HTTPException(status_code=fastapi_status.HTTP_409_CONFLICT, detail="Email already registered")
-
-    user = await create_user(db, UserCreate(email=email, name=full_name, date_of_birth=date_of_birth))
-
-    totp_secret = generate_totp_secret()
-    otpauth_url = f"otpauth://totp/JobPortal:{email}?secret={totp_secret}&issuer=JobPortal"
-
-    user = await update_user_totp(db, user.id, totp_secret, otpauth_url)
-
-    import urllib.parse
-    qr_code_data_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(otpauth_url)}"
-
-    return {
-        "message": "Account created! Please activate with your authenticator app.",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "qr_code": qr_code_data_url,
-            "totp_secret": totp_secret,
-        }
-    }
-
-
-@router.get("/totp/qr")
-async def totp_qr(email: Annotated[str, Query()], db: AsyncSession = Depends(get_async_db)):
-    """Get TOTP QR code as PNG image."""
-    email = _validate_email(email)
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
-    if not user or not user.totp_secret:
-        raise HTTPException(status_code=fastapi_status.HTTP_404_NOT_FOUND, detail="User not found or TOTP not set")
-
-    import qrcode
-    import io
-    uri = f"otpauth://totp/JobPortal:{email}?secret={user.totp_secret}&issuer=JobPortal"
-    img = qrcode.make(uri)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return FastAPIResponse(content=buf.getvalue(), media_type="image/png")
-
-
-@router.post("/activate", response_model=dict)
-async def activate(email: Annotated[str, Form()], otp: Annotated[str, Form()], db: AsyncSession = Depends(get_async_db)):
-    """Activate account using TOTP code."""
-    user = await get_user_by_email(db, email)
-    if not user:
-        raise HTTPException(status_code=fastapi_status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    if user.is_approved:
-        raise HTTPException(status_code=fastapi_status.HTTP_400_BAD_REQUEST, detail="Account already activated")
-
-    if not user.totp_secret:
-        raise HTTPException(status_code=fastapi_status.HTTP_400_BAD_REQUEST, detail="User has no TOTP secret set")
-
-    if not verify_totp(user.totp_secret, otp):
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code")
-
-    user = await activate_user(db, user.id)
-
-    access_token = auth_manager.create_access_token(str(user.id), user.role)
-    refresh_token = auth_manager.create_refresh_token(str(user.id))
-
-    user.refresh_token = refresh_token
-    await db.commit()
-
-    return {
-        "message": "Account activated successfully!",
-        "access_token": access_token,
-        "token_type": "bearer",
-        "expires_at": int(time.time() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "is_admin": user.is_admin,
-            "is_approved": user.is_approved,
-        }
-    }
-
-
-@router.post("/login", response_model=dict)
-async def login(email: Annotated[str, Form()], otp: Annotated[str, Form()], response: Response = None, db: AsyncSession = Depends(get_async_db)):
-    """Login with email and TOTP code, set HTTP-only cookies."""
-    user = await get_user_by_email(db, email)
-    if not user or not user.is_approved:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or account not activated")
-
-    if not user.totp_secret or not verify_totp(user.totp_secret, otp):
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid TOTP code")
-
-    access_token = auth_manager.create_access_token(str(user.id), user.role)
-    refresh_token = auth_manager.create_refresh_token(str(user.id))
-
-    user.refresh_token = refresh_token
-    await db.commit()
-
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
-
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite="lax",
-        max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
-    )
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "expires_at": int(time.time() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "is_admin": user.is_admin,
-            "is_approved": user.is_approved,
-        }
-    }
+    if not refresh_token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "No refresh token")
+    payload = auth_manager.verify_token(refresh_token, "refresh")
+    if not payload:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
+    user = await db.scalar(select(User).where(User.id == int(payload["sub"])))
+    if not user or not user.is_active or user.refresh_token != refresh_token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session no longer valid")
+    return await _issue_session(response, user, db)
 
 
 @router.post("/logout")
-async def logout(response: Response):
-    """Logout and clear cookies."""
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
-    return {"message": "Logged out successfully"}
-
-
-@router.post("/refresh")
-async def refresh_token(
-    refresh_token_cookie: Optional[str] = Cookie(None), response: Response = None, db: AsyncSession = Depends(get_async_db)
+async def logout(
+    response: Response,
+    refresh_token: Optional[str] = Cookie(None),
+    db: AsyncSession = Depends(get_async_db),
 ):
-    """Refresh access token using refresh token from cookie."""
-    if not refresh_token_cookie:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+    if refresh_token:
+        payload = auth_manager.verify_token(refresh_token, "refresh")
+        if payload:
+            user = await db.scalar(select(User).where(User.id == int(payload["sub"])))
+            if user:
+                user.refresh_token = None
+                await db.commit()
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    return {"message": "Logged out"}
 
-    payload = auth_manager.verify_token(refresh_token_cookie, token_type="refresh")
+
+@router.get("/me", response_model=UserOut)
+async def me(user: User = Depends(get_current_user)):
+    return UserOut.model_validate(user)
+
+
+@router.get("/session", response_model=AuthResponse)
+async def session_info(request: Request, response: Response, user: User = Depends(get_current_user)):
+    token = request.cookies.get("access_token")
+    if not token:
+        token = request.headers.get("authorization", "")[7:].strip()
+    payload = auth_manager.verify_token(token)
     if not payload:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-
-    user = await get_user_by_id(db, int(payload.get("sub")))
-    if not user:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="User not found")
-
-    if user.refresh_token != refresh_token_cookie:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Token mismatch")
-
-    new_access_token = auth_manager.create_access_token(str(user.id), user.role)
-
-    if response:
-        response.set_cookie(
-            key="access_token",
-            value=new_access_token,
-            httponly=True,
-            secure=settings.COOKIE_SECURE,
-            samesite="lax",
-            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        )
-
-    return {
-        "access_token": new_access_token,
-        "token_type": "bearer",
-        "expires_at": int(time.time() * 1000) + settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 * 1000,
-    }
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session expired. Please sign in again.")
+    refresh_token = request.cookies.get("refresh_token")
+    refresh_payload = (
+        auth_manager.verify_token(refresh_token, "refresh")
+        if refresh_token and refresh_token == user.refresh_token else None
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return AuthResponse(
+        user=UserOut.model_validate(user), expires_at=payload["exp"] * 1000,
+        refresh_expires_at=refresh_payload["exp"] * 1000 if refresh_payload else None,
+        server_time=int(time.time() * 1000),
+    )
 
 
-@router.get("/me", response_model=dict)
-async def get_current_user(access_token: str = Cookie(None), db: AsyncSession = Depends(get_async_db)):
-    """Get current user from token."""
-    if not access_token:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+@router.patch("/me", response_model=UserOut)
+async def update_me(body: NameUpdate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=422, detail="Name cannot be empty.")
+    user.name = name
+    await db.commit()
+    return UserOut.model_validate(user)
 
-    payload = auth_manager.verify_token(access_token)
-    if not payload:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user = await get_user_by_id(db, int(payload.get("sub")))
-    if not user:
-        raise HTTPException(status_code=fastapi_status.HTTP_401_UNAUTHORIZED, detail="User not found")
+@router.post("/email/send", response_model=EmailSendResult)
+async def send_email_code(request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+    _rate_limit(request, "email-send")
+    if user.email_verified:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Your email is already verified")
+    code = ev.new_code()
+    user.email_code_hash = ev.hash_code(code)
+    user.email_code_expires = ev.expiry()
+    user.email_code_attempts = 0
+    await db.commit()
+    try:
+        delivered = await ev.deliver(user.email, code)
+    except ev.EmailDeliveryError:
+        logging.getLogger("job_portal").exception("Verification email delivery failed")
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Could not send the email. Please try again later.")
+    msg = (
+        f"We sent a 6-digit code to {user.email}."
+        if delivered
+        else "Email delivery isn't configured on this server; the code was written to the backend log."
+    )
+    return EmailSendResult(message=msg, delivered=delivered)
 
-    return {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "full_name": user.name,
-        "role": user.role,
-        "is_admin": user.is_admin,
-        "is_approved": user.is_approved,
-        "date_of_birth": user.date_of_birth,
-        "dob_update_count": 0,
-        "avatar_url": None,
-        "receive_announcements": True,
-        "permissions": [],
-    }
+
+@router.post("/email/verify", response_model=UserOut)
+async def verify_email_code(
+    body: EmailCodeRequest, request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)
+):
+    _rate_limit(request, "email-verify")
+    if user.email_verified:
+        return UserOut.model_validate(user)
+    if not user.email_code_hash or not user.email_code_expires or user.email_code_expires < datetime.utcnow():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code expired. Request a new one.")
+    if user.email_code_attempts >= ev.MAX_ATTEMPTS:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many attempts. Request a new code.")
+    user.email_code_attempts += 1
+    if not ev.codes_match(user.email_code_hash, body.code):
+        await db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Incorrect code")
+    user.email_verified = True
+    user.email_code_hash = None
+    user.email_code_expires = None
+    await db.commit()
+    return UserOut.model_validate(user)

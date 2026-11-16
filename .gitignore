@@ -134,3 +134,6 @@ uploads/
 
 # Migration files (optional - uncomment if you don't want to track migrations)
 # alembic/versions/
+# Local secrets / uploads
+.secret_key
+job_portal/.secret_key

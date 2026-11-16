@@ -1,56 +1,38 @@
 """
 Author: Kishore Kumar
-Shared pytest configuration.
-
-- Points the app at a throwaway database for the whole run (never the real rca_auth.db).
-- Patches out the RabbitMQ connect/close lifecycle so tests never try to
-  open a real AMQP connection during app startup/shutdown.
-- Keeps the Regression scheduler loop from starting with the app, and Single Run results
-  and the startup claim cleanup out of the real database (``run_analyses``).
-- Sets a deterministic RCA_SERVICE_API_KEY used by test_routers_rca.py.
+Shared pytest setup: throwaway database/uploads, no scheduler, async HTTP client.
 """
-from __future__ import annotations
 
-import asyncio
 import os
 import tempfile
-from unittest.mock import AsyncMock, patch
 
-import pytest
+_TMP = tempfile.mkdtemp(prefix="job_portal_tests_")
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", f"sqlite+aiosqlite:///{_TMP}/test.db")
+os.environ["UPLOAD_DIR"] = f"{_TMP}/uploads"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-test-secret-key-0123456789"
+os.environ["AUTO_APPLY_INTERVAL_MINUTES"] = "0"
 
-# Every test runs against a throwaway SQLite file — never the real rca_auth.db (tests used to write
-# job rows into it and fight the running dev server for its write lock). Set before the app (and
-# its engine) is imported; the environment wins over .env.
-_TEST_DB_DIR = tempfile.mkdtemp(prefix="rca-tests-")
-os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{os.path.join(_TEST_DB_DIR, 'test.db')}"
+import httpx  # noqa: E402
+from helpers import register  # noqa: E402
+import pytest_asyncio  # noqa: E402
 
-
-@pytest.fixture(scope="session", autouse=True)
-def _test_database():
-    """Create every table in the throwaway database once (tests without the app lifespan need them)."""
-    from app.core import db as core_db
-    import app.auth.models  # noqa: F401 — register the models on Base
-
-    async def _create():
-        async with core_db.engine.begin() as conn:
-            await conn.run_sync(core_db.Base.metadata.create_all)
-        await core_db.engine.dispose()
-
-    asyncio.run(_create())
-    yield
+from app.api.v1 import auth as auth_routes  # noqa: E402
+from app.database import Base, async_engine  # noqa: E402
+from app.main import app, init_db  # noqa: E402
 
 
-@pytest.fixture(autouse=True)
-def mock_mq_lifecycle():
-    """Prevent real RabbitMQ connections in every test."""
-    with (
-        patch("app.services.mq_publisher.connect", new_callable=AsyncMock),
-        patch("app.services.mq_publisher.close", new_callable=AsyncMock),
-        patch("app.services.mq_publisher.publish_verdicts", new_callable=AsyncMock),
-        patch("app.services.regression_scheduler.start"),  # no background schedule loop in tests
-        # Single Run results are stored for batch reuse; keep tests out of the real database.
-        patch("app.routers.rca._remember_quietly", new_callable=AsyncMock),
-        patch("app.services.run_analysis.clear_stale_claims", new_callable=AsyncMock, return_value=0),
-    ):
-        yield
+@pytest_asyncio.fixture
+async def client():
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await init_db()
+    auth_routes._attempts.clear()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
 
+
+@pytest_asyncio.fixture
+async def user(client):
+    """A signed-up, activated, logged-in user (cookies live on ``client``)."""
+    return (await register(client))[0]

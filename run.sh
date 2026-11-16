@@ -58,11 +58,11 @@ fi
 # Install dependencies (don't activate venv, use venv's pip/python directly)
 echo -e "${BLUE}Installing dependencies...${NC}"
 if $IS_WINDOWS; then
-    ./venv/Scripts/pip install -q fastapi uvicorn sqlalchemy aiosqlite pydantic-settings python-multipart 2>/dev/null || true
+    ./venv/Scripts/pip install -q -r requirements.txt || true
     ./venv/Scripts/python main.py &
 else
     source venv/bin/activate
-    pip install -q fastapi uvicorn[standard] sqlalchemy aiosqlite pydantic-settings python-multipart 2>/dev/null || true
+    pip install -q -r requirements.txt || true
     python main.py &
 fi
 BACKEND_PID=$!
@@ -75,7 +75,7 @@ echo -e "${GREEN}Backend running at http://localhost:8886${NC}"
 # Start frontend
 echo -e "${GREEN}Starting frontend on port 5173...${NC}"
 cd frontend
-npm install --quiet 2>/dev/null || npm.cmd install --quiet 2>/dev/null || true
+[ -x node_modules/.bin/vite ] || npm install --no-audit --no-fund || npm.cmd install --no-audit --no-fund || true
 npm run dev &
 FRONTEND_PID=$!
 cd ..

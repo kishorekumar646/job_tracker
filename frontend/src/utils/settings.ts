@@ -1,37 +1,23 @@
 // Author: Kishore Kumar
-// Settings are keyed per user so two accounts on the same machine never share
-// theme, default platform, or any other preference.
+// Settings are keyed per user so two accounts on the same machine never share a theme.
 let _email = 'guest'
 
 export function setSettingsUser(email: string) {
   _email = email || 'guest'
 }
 
-function storageKey() {
-  return `rca_settings_${_email}`
-}
-
-export type AppTheme = 'indigo' | 'violet' | 'teal' | 'rose'
+export type AppTheme = 'gold' | 'indigo' | 'violet' | 'teal' | 'rose'
 
 export interface AppSettings {
-  healthPollEnabled: boolean
-  browserNotifications: boolean
-  receiveAnnouncements: boolean
   theme: AppTheme
-  defaultPlatform: string  // '' = All Platforms
 }
 
-const DEFAULTS: AppSettings = {
-  healthPollEnabled: true,
-  browserNotifications: false,
-  receiveAnnouncements: true,
-  theme: 'indigo',
-  defaultPlatform: '',
-}
+const DEFAULTS: AppSettings = { theme: 'gold' }
+const key = () => `jobpilot_settings_${_email}`
 
 export function getSettings(): AppSettings {
   try {
-    const raw = localStorage.getItem(storageKey())
+    const raw = localStorage.getItem(key())
     return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS
   } catch {
     return DEFAULTS
@@ -40,7 +26,6 @@ export function getSettings(): AppSettings {
 
 export function saveSettings(patch: Partial<AppSettings>): AppSettings {
   const next = { ...getSettings(), ...patch }
-  localStorage.setItem(storageKey(), JSON.stringify(next))
-  window.dispatchEvent(new CustomEvent('rca-settings-changed', { detail: next }))
+  localStorage.setItem(key(), JSON.stringify(next))
   return next
 }

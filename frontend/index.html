@@ -1,54 +1,26 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0d1117" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Job Tracker" />
-    <title>Job Tracker</title>
+    <meta name="apple-mobile-web-app-title" content="JobPilot" />
+    <meta name="theme-color" content="#080c10" />
+    <meta name="description" content="Find relevant jobs, organize your applications and track interviews and offers in one mobile-friendly JobPilot workspace." />
+    <title>JobPilot — Your job search, organized</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body class="bg-gray-950 text-gray-50 antialiased">
-    <script>
-      try {
-        var _THEME_VARS = {
-          indigo: '--color-primary-300:165 180 252;--color-primary-400:129 140 248;--color-primary-500:99 102 241;--color-primary-600:79 70 229;--color-primary-700:67 56 202;--color-primary-800:55 48 163;--color-primary-900:49 46 129;--color-primary-950:30 27 75;--color-primary-hex-300:#a5b4fc;--color-primary-hex-400:#818cf8;--color-primary-hex-500:#6366f1;--color-primary-hex-600:#4f46e5;--color-primary-rail:#2e2f6e;--color-primary-signal:#c7d2fe',
-          violet: '--color-primary-300:196 181 253;--color-primary-400:167 139 250;--color-primary-500:139 92 246;--color-primary-600:124 58 237;--color-primary-700:109 40 217;--color-primary-800:91 33 182;--color-primary-900:76 29 149;--color-primary-950:46 16 101;--color-primary-hex-300:#c4b5fd;--color-primary-hex-400:#a78bfa;--color-primary-hex-500:#8b5cf6;--color-primary-hex-600:#7c3aed;--color-primary-rail:#3b1f6e;--color-primary-signal:#ddd6fe',
-          teal:   '--color-primary-300:94 234 212;--color-primary-400:45 212 191;--color-primary-500:20 184 166;--color-primary-600:13 148 136;--color-primary-700:15 118 110;--color-primary-800:17 94 89;--color-primary-900:19 78 74;--color-primary-950:4 47 46;--color-primary-hex-300:#5eead4;--color-primary-hex-400:#2dd4bf;--color-primary-hex-500:#14b8a6;--color-primary-hex-600:#0d9488;--color-primary-rail:#0f3f3c;--color-primary-signal:#99f6e4',
-          rose:   '--color-primary-300:253 164 175;--color-primary-400:251 113 133;--color-primary-500:244 63 94;--color-primary-600:225 29 72;--color-primary-700:190 18 60;--color-primary-800:159 18 57;--color-primary-900:136 19 55;--color-primary-950:76 5 25;--color-primary-hex-300:#fda4af;--color-primary-hex-400:#fb7185;--color-primary-hex-500:#f43f5e;--color-primary-hex-600:#e11d48;--color-primary-rail:#5a1028;--color-primary-signal:#fecdd3'
-        };
-        var _t = (JSON.parse(localStorage.getItem('rca_settings') || '{}').theme) || 'indigo';
-        var _s = document.createElement('style');
-        _s.id = 'rca-theme';
-        _s.textContent = ':root{' + (_THEME_VARS[_t] || _THEME_VARS.indigo) + '}';
-        document.head.appendChild(_s);
-      } catch(e) {}
-    </script>
+  <body class="bg-gray-950 text-gray-100 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Capture the install prompt as early as possible — before React mounts.
-      window.__pwaInstallPrompt = null
-      window.addEventListener('beforeinstallprompt', function(e) {
-        e.preventDefault()
-        window.__pwaInstallPrompt = e
-        window.dispatchEvent(new Event('pwa-prompt-ready'))
-      })
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {})
-        })
-      }
-    </script>
   </body>
 </html>

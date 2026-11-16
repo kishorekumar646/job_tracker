@@ -1,210 +1,219 @@
 // Author: Kishore Kumar
-export interface SessionResponse {
-  access_token: string
-  token_type: string
+export type ApplicationStatus =
+  | 'applied'
+  | 'shortlisted'
+  | 'interview_scheduled'
+  | 'interview_completed'
+  | 'offer'
+  | 'rejected'
+  | 'withdrawn'
+  | 'to_apply'
+
+export type JobType = 'full_time' | 'part_time' | 'contract' | 'internship'
+
+export type Platform = 'linkedin' | 'naukri' | 'indeed' | 'glassdoor' | 'foundit' | 'instahyre'
+export type JobSource = Platform | 'manual' | 'other'
+
+export interface User {
+  id: number
+  email: string
+  name: string | null
+  avatar: string | null
+  role: string
+  email_verified: boolean
+  receive_announcements: boolean
+  plan: string
+  plan_expires_at: string | null
+  created_at: string | null
+}
+
+export interface AuthResponse {
+  user: User
   expires_at: number
-  user: { email: string; name?: string | null; full_name?: string | null; role: string; id: number; is_admin: boolean; is_approved?: boolean }
+  refresh_expires_at: number | null
+  server_time: number
 }
 
-export interface MessageResponse {
+export interface SignupResponse {
   message: string
-}
-
-export interface UserProfile {
-  id?: number
   email: string
-  name?: string | null
-  full_name?: string
-  role: string
-  is_admin: boolean
-  created_at?: string
-  date_of_birth?: string
-  dob_update_count?: number
-  avatar_url?: string | null
-  receive_announcements?: boolean
-  permissions?: string[]
-  is_approved?: boolean
+  totp_secret: string
+  otpauth_url: string
+  qr_code: string
 }
 
-export type RcaCategory =
-  | 'DRM_ERROR'
-  | 'PLAYOUT_ERROR'
-  | 'ENVIRONMENT'
-  | 'BROWSERSTACK_CAPACITY'
-  | 'ORCHESTRATION'
-  | 'AUTOMATION_SCRIPT'
-  | 'TEST_ASSERTION'
-  | 'KNOWN_ISSUE'
-  | 'UNKNOWN'
-  // STB CS error categories
-  | 'NETWORK_ERROR'
-  | 'HARDWARE_ERROR'
-  | 'SOFTWARE_UPDATE_ERROR'
-  | 'PROVISIONING_ERROR'
-  | 'BACKEND_ERROR'
-  | 'OTT_ERROR'
-  | 'ACCOUNT_ERROR'
+export interface Profile {
+  headline: string | null
+  summary: string | null
+  phone: string | null
+  location: string | null
+  experience_years: number | null
+  skills: string[]
+  resume_filename: string | null
+  resume_size: number | null
+  resume_uploaded_at: string | null
+  completeness: number
+}
 
-export type Platform =
-  | 'STB'
-  | 'PERSEUS_ANDROID'
-  | 'PERSEUS_IOS'
-  | 'PERSEUS_WEB'
-  | 'BROWSERSTACK'
+export type ProfileUpdate = Partial<Omit<Profile, 'resume_filename' | 'resume_size' | 'resume_uploaded_at' | 'completeness'>>
 
-export type JobStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED' | 'STOPPED'
+export interface Preferences {
+  job_titles: string[]
+  locations: string[]
+  job_types: JobType[]
+  remote_ok: boolean
+  min_salary_lpa: number | null
+  auto_apply_enabled: boolean
+  daily_limit: number
+  min_match_score: number
+}
 
-export interface RcaVerdict {
-  testCaseRunId: string
+export interface Connection {
   platform: Platform
-  category: RcaCategory
-  confidence: number
-  explanation: string
-  matchedRule: string | null
-  matchedJiraTicket: string | null
-  jiraUrl: string | null
-  reportUrl: string | null
-  screenshot?: string | null
-  failureErrors?: Array<Record<string, string>>
-  stepReasons?: Array<Record<string, string>>
-  aiSuggested?: boolean
-  componentLogs?: string | null
-  flatLogs?: string | null
-  /** The InspectorWeb run this verdict came from — set for batch results, to show them run by run. */
-  runUuid?: string | null
-  runName?: string | null
-  /** Device error code behind the category (e.g. STB CS2201) and its mapping details */
-  errorCode?: string | null
-  errorTitle?: string | null
-  errorSubsystem?: string | null
+  label: string
+  description: string
+  connected: boolean
+  handle: string | null
+  profile_url: string | null
+  connected_at: string | null
 }
 
-export interface AnalyzeRequest {
-  runUuid?: string
-  /** Batch over these runs (stored verdicts are reused). */
-  runUuids?: string[]
-  /** Name of the batch job in Job History. */
-  batchLabel?: string
-  testCaseName?: string
-  sinceMinutes?: number
-  sinceDays?: number
-  platform?: Platform
-  sessionId?: string
-  syncJobId?: string
+export interface Job {
+  id: number
+  title: string
+  company: string
+  location: string | null
+  description: string | null
+  external_link: string | null
+  source: JobSource
+  job_type: JobType | null
+  skills: string[]
+  is_remote: boolean
+  salary_min_lpa: number | null
+  salary_max_lpa: number | null
+  posted_date: string | null
+  match_score: number | null
+  matched_skills: string[]
+  applied: boolean
+  is_own: boolean
 }
 
-export interface AnalyzeResponse {
-  jobId: string | null
-  syncJobId: string | null
-  verdicts: RcaVerdict[] | null
+export interface JobCreate {
+  title: string
+  company: string
+  location?: string
+  description?: string
+  external_link?: string
+  source: JobSource
+  job_type?: JobType
+  skills?: string[]
+  is_remote?: boolean
+  salary_min_lpa?: number
+  salary_max_lpa?: number
 }
 
-export interface JobStatusResponse {
-  jobId: string
-  status: JobStatus
-  verdicts: RcaVerdict[]
-  summary: Record<string, number | Record<string, number>>
-}
-
-export interface HealthResponse {
-  status: string
-  unavailable: string[]
-  odh: boolean
-  jira: boolean
-  rabbitmq: boolean
-  inspectorweb: boolean
-  odh_note?: string
-  detail?: Record<string, string>
-}
-
-export interface AuthUser {
-  email: string
-  role: string
-  full_name?: string
-  created_at?: string
-  date_of_birth?: string
-  dob_update_count?: number
-  /** Effective permission keys from GET /auth/me (admins get all). */
-  permissions?: string[]
-  /** False while a self-registered account waits for an admin's approval (GET /auth/me). */
-  is_approved?: boolean
-  /** Profile photo URL (GET /auth/me), or empty for initials. */
-  avatar_url?: string | null
-}
-
-export interface RuleStats {
-  ruleName: string
-  staticConfidence: number
-  hits: number
-  confirmed: number
-  disputed: number
-  overrideConfidence: number | null
-  effectiveConfidence: number
-  updatedAt: string | null
-}
-
-export interface StoredAnalysis {
-  id: string
-  timestamp: string
-  mode: 'sync' | 'async'
-  runUuid?: string
-  jobId?: string
-  status: JobStatus
-  verdictCount: number
-  verdicts?: RcaVerdict[]
-  summary?: Record<string, number | Record<string, number>>
-  executionName?: string
-  cancelReason?: string | null
-  durationSecs?: number | null
-  reportId?: string
-  reportCreatedBy?: string
-  reportCreatedAt?: string
-  reportUrl?: string
+export interface Application {
+  id: number
+  job_id: number
+  status: ApplicationStatus
+  notes: string | null
+  interview_date: string | null
+  offer_salary_lpa: number | null
+  match_score: number | null
+  auto_applied: boolean
+  applied_at: string
+  updated_at: string
+  job: Job
 }
 
 export interface DashboardStats {
-  categoryBreakdown: Partial<Record<RcaCategory, number>>
-  platformBreakdown: Partial<Record<Platform, number>>
-  recentVerdicts: RcaVerdict[]
-  totalVerdicts: number
-  knownIssueCount: number
-  /** Regression-tab runs the app analysed by itself (not in Job History), and their new verdicts per day. */
-  autoAnalysedRuns?: number
-  autoVerdictsByDay?: Record<string, number>
+  total_applications: number
+  auto_applied: number
+  by_status: Record<string, number>
+  by_source: Record<string, number>
+  by_day: Record<string, number>
+  interviews: number
+  offers: number
+  response_rate: number
+  connected_platforms: number
+  profile_completeness: number
+  recent: Application[]
 }
 
-export interface AppNotification {
+export interface AutoApplyRun {
   id: number
-  sender_name: string | null
-  notif_type: 'dashboard_view' | 'report_view' | 'announcement'
-  job_uid: string | null
+  trigger: 'manual' | 'scheduled'
+  started_at: string
+  evaluated: number
+  applied: number
+  skipped: number
   message: string | null
-  is_read: boolean
+}
+
+export interface AutoApplyStatus {
+  enabled: boolean
+  ready: boolean
+  blockers: string[]
+  connected_platforms: Platform[]
+  applied_today: number
+  daily_limit: number
+  lifetime_used: number
+  lifetime_limit: number | null
+  last_run: AutoApplyRun | null
+}
+
+export interface BillingMe {
+  plan: 'free' | 'pro'
+  plan_expires_at: string | null
+  free: { total_auto_apply: number | null }
+  pro: { daily_auto_apply: number | null }
+  price_inr: number
+  pro_days: number
+  applied_today: number
+  daily_limit: number
+  lifetime_used: number
+  lifetime_limit: number | null
+  upi_configured: boolean
+}
+
+export type OrderStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'FAILED'
+
+export interface Order {
+  id: number
+  order_ref: string
+  plan_id: string
+  base_amount: number
+  unique_amount: number
+  status: OrderStatus
+  expires_at: string
+  paid_at: string | null
   created_at: string
+  invoice_no: string | null
 }
 
-// ── Job Application Tracker Types ────────────────────────────────────────────────
-
-export type ApplicationStatus = 'Applied' | 'Interview Scheduled' | 'Offer Received' | 'Rejected' | 'Withdrawn'
-
-export interface JobApplication {
-  id: string
-  company: string
-  job_title: string
-  location: string
-  status: ApplicationStatus
-  applied_date: string
-  job_link?: string
-  resume_version?: string
-  notes?: string
+export interface Checkout {
+  order: Order
+  amount: string
+  payee_name: string
+  upi_uri: string
+  qr_code: string
+  seconds_left: number
 }
 
-export interface AutoApplySettings {
-  connected_accounts: Record<string, { connected: boolean; username?: string }>
-  resume_name?: string | null
-  preferred_cities: string[]
-  desired_roles: string[]
-  min_salary: number
-  experience_level: string
-  is_auto_apply_active: boolean
+export interface AdminOrder extends Order {
+  user_email: string
+  user_name: string | null
+  utr: string | null
+  source: string | null
+}
+
+export interface WebhookLog {
+  id: number
+  raw: string
+  amount_paise: number | null
+  utr: string | null
+  order_ref: string | null
+  result: string
+  order_id: number | null
+  created_at: string
 }

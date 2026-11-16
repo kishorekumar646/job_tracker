@@ -1,24 +1,16 @@
 // Author: Kishore Kumar
-// A user's profile photo, or their initials when there's none (or it fails to load).
-import { useEffect, useState } from 'react'
+import type { User } from '../../types'
 
-interface Props {
-  url?: string | null
-  initials: string
-  /** Size, shape and initials colour — e.g. "h-7 w-7 text-xs bg-primary-600". */
-  className?: string
-  alt?: string
-}
+const COLORS = ['bg-violet-600', 'bg-indigo-600', 'bg-blue-600', 'bg-cyan-600', 'bg-teal-600', 'bg-emerald-600', 'bg-amber-600', 'bg-orange-600', 'bg-rose-600', 'bg-pink-600']
 
-export function UserAvatar({ url, initials, className = '', alt = 'Profile photo' }: Props) {
-  const [failed, setFailed] = useState(false)
-  useEffect(() => setFailed(false), [url])
-  if (url && !failed) {
-    return <img src={url} alt={alt} onError={() => setFailed(true)} className={`shrink-0 rounded-full object-cover ${className}`} draggable={false} />
-  }
+export function UserAvatar({ user, className = '' }: { user: Pick<User, 'name' | 'email' | 'avatar'> | null; className?: string }) {
+  const email = user?.email ?? ''
+  const initials = (user?.name || email || '?').split(/[\s@]/).filter(Boolean).slice(0, 2).map((s) => s[0].toUpperCase()).join('')
+  let hash = 0
+  for (let i = 0; i < email.length; i++) hash = (hash * 31 + email.charCodeAt(i)) >>> 0
   return (
-    <div className={`flex shrink-0 items-center justify-center rounded-full font-bold text-white select-none ${className}`}>
-      {initials}
+    <div className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white ${COLORS[hash % COLORS.length]} ${className}`}>
+      {user?.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" /> : initials}
     </div>
   )
 }
