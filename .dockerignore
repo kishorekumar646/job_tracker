@@ -1,0 +1,20 @@
+# Author: Kishore Kumar
+**
+!Dockerfile
+!frontend/
+!frontend/**
+!job_portal/
+!job_portal/requirements.txt
+!job_portal/app/
+!job_portal/app/**
+!job_portal/tools/
+!job_portal/tools/make_admin.py
+**/.env
+**/.env.*
+**/.npmrc
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/*.db
+**/*.log
