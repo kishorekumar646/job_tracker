@@ -22,7 +22,6 @@ import { REGRESSION_MAINTENANCE } from '../../utils/features'
 // Developer credit in the footer — hidden until deployment; set to true to show it again.
 const SHOW_DEVELOPER_CREDIT = false
 const DEVELOPER_NAME = 'Kishore Kumar'
-const DEVELOPER_EMAIL = 'kishor.m@infosys.com'
 // Microsoft Teams deep link: opens a 1:1 chat with the developer, opening message pre-filled
 const DEVELOPER_CHAT_URL =
   `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(DEVELOPER_EMAIL)}` +
