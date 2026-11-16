@@ -67,7 +67,9 @@ printing verification codes to production logs.
 ## 3. Deploy the repository
 
 1. Save and push the intended application changes, including `Dockerfile`, `.dockerignore` and
-   `render.yaml`, to your GitHub repository. Do not push local credentials, databases, uploads or virtualenvs.
+   `render.yaml`, to your GitHub repository. Include `frontend/package-lock.json`: the Docker
+   build copies it and uses `npm ci`, so the lockfile must be committed alongside `frontend/package.json`.
+   Do not push local credentials, databases, uploads or virtualenvs.
 2. Sign in to [Render](https://dashboard.render.com), choose **New → Blueprint**, and connect the repository.
 3. Review the blueprint: **one Docker web service, Free plan**. Change the service name if needed.
 4. Supply `DATABASE_URL`, `BREVO_API_KEY` and `BREVO_SENDER_EMAIL` when prompted.
