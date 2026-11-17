@@ -1,7 +1,7 @@
 // Author: Kishore Kumar
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, Briefcase, Bot, Github, Globe, Linkedin, LayoutDashboard, Link2, LogOut, Crown, Menu, MessageSquareHeart, Rocket, Settings, ShieldCheck, Search, X } from 'lucide-react'
+import { BookOpen, Briefcase, Bot, Github, Globe, Linkedin, LayoutDashboard, Link2, LogOut, Crown, Mail, Menu, MessageSquareHeart, Rocket, Settings, ShieldCheck, Search, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import Admin from '../../pages/Admin'
 import { PageLoader, type PageLoaderVariant } from '../ui'
@@ -203,12 +203,16 @@ export function AppLayout() {
           </>
         )}
       </nav>
-      <div className="space-y-3 border-t border-gray-800 px-4 py-4">
+      <footer className="shrink-0 space-y-3 border-t border-gray-800 px-4 py-4">
         <button onClick={() => { setOpen(false); setFeedbackOpen(true) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-brand-500/10 hover:text-brand-400"><MessageSquareHeart className="h-4 w-4" />Share feedback</button>
         <button onClick={doLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400">
           <LogOut className="h-4 w-4" /> Log out
         </button>
-      </div>
+        <div className="border-t border-gray-800 pt-3 text-[11px] leading-relaxed text-gray-400">
+          <p>Built by <span className="text-brand-300">Kishore Kumar.</span></p>
+          <a href="mailto:kishorekumar131646@gmail.com?subject=JobPilot%20enquiry" className="mt-1 flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-sm text-[10px] transition-colors hover:text-brand-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"><Mail aria-hidden="true" className="h-3 w-3 shrink-0" /><span>Let&apos;s make the next move a good one.</span></a>
+        </div>
+      </footer>
     </aside>
   )
 

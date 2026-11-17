@@ -129,6 +129,8 @@ enabled and the backend is awake; the free Render blueprint disables that schedu
   More opens the existing navigation drawer for Connections, Plans and admin access. The bar sits
   outside the scrolling content, respects the bottom safe area and never covers page actions.
   Phone workspaces use gold-accented editorial headers, layered cards and larger touch controls.
+  The desktop sidebar and mobile drawer repeat the homepage's builder credit and contact tagline
+  beneath the feedback and logout actions.
 - Connectivity recovery dismisses the offline banner in place, without reloading or navigating.
   The current page, signup step and entered values remain intact. Connectivity probes pause while
   the app is hidden and check again on return, including after opening an authenticator app.
