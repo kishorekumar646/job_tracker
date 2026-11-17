@@ -80,7 +80,7 @@
   50% { opacity: 1; filter: drop-shadow(0 0 22px rgb(var(--brand-400))); }
 }
 @keyframes orbitSpin { to { transform: rotate(360deg); } }
-.auth-bg { background: radial-gradient(ellipse at 12% 35%, rgb(var(--brand-900) / .35), transparent 60%), #080c10; }
+.auth-bg { --auth-gutter: clamp(16px, 3vw, 80px); min-height: 100vh; min-height: 100dvh; background: radial-gradient(ellipse at 12% 35%, rgb(var(--brand-900) / .35), transparent 60%), #080c10; }
 .auth-text-shadow { text-shadow: 0 1px 14px rgba(0,0,0,1), 0 0 28px rgba(0,0,0,0.9); }
 
 .skeleton {
@@ -127,13 +127,19 @@
 .account-nav-links > a { white-space: nowrap; color: #a2ada8; }
 .account-nav-links > a:hover, .account-nav-links > a[aria-current="page"] { color: rgb(var(--brand-300)); }
 .account-nav-links > a:last-child { border: 1px solid rgb(var(--brand-400) / .35); border-radius: 6px; padding: 9px 14px; }
-.auth-layout { width: 100%; }
-.auth-brand-panel { min-height: 660px; }
+.auth-bg .account-nav { width: auto; margin-inline: var(--auth-gutter); }
+.auth-layout { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 32px; padding: 32px var(--auth-gutter); }
+.auth-form-panel { width: 100%; max-width: 36rem; justify-self: center; }
+.auth-brand-panel { min-width: 0; gap: 24px; }
 .auth-brand-panel h2 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(40px, 4vw, 58px); font-weight: 400; }
 .auth-brand-panel h2 span { color: rgb(var(--brand-300)); font-style: italic; }
 .auth-card { position: relative; border-color: rgb(var(--brand-400) / .25); box-shadow: 0 30px 90px -50px #000, inset 0 1px 0 rgb(var(--brand-300) / .08); }
 .auth-card > h1, .onboarding-page h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 34px; font-weight: 400; letter-spacing: -.03em; }
 .auth-card::before { position: absolute; top: -1px; left: 32px; width: 64px; height: 1px; background: rgb(var(--brand-300)); content: ''; }
+@media (min-width: 1024px) {
+  .auth-layout { grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: clamp(32px, 4vw, 96px); }
+  .auth-form-panel { max-width: clamp(26rem, 34vw, 40rem); justify-self: end; }
+}
 .onboarding-page { background: radial-gradient(ellipse at 20% 0, rgb(var(--brand-300) / .065), transparent 65%), #080c10; }
 .filter-bar { min-width: 0; max-width: 100%; padding: 16px; border: 1px solid #27322e; border-radius: 12px; background: #10171b; }
 .filter-field { flex: 1 1 220px; min-width: 0; max-width: 100%; }

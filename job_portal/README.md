@@ -192,6 +192,12 @@ Signed-in visitors can open their dashboard from the same page. Authentication r
 `/login` and `/signup`; protected routes still require a session. Preview jobs are illustrative,
 not real listings. Marketing copy describes current capabilities, including the external-application
 limitation, rather than promising submission on third-party websites.
+Both authentication pages use the full screen width with fluid gutters shared by the header.
+Laptops and desktops place branding on the left and a viewport-scaled form on the right, rather
+than capping the whole page inside a centered container. Tablets and phones use a single-column
+form; form widths remain bounded for readability. The page follows the available viewport height,
+and short screens and authenticator setup scroll naturally without clipping.
+Page headings and signup progress steps are centered within the form card; field labels stay left-aligned.
 
 ## Shared appearance
 

@@ -272,7 +272,7 @@ export function BrandPanel() {
     { icon: ShieldCheck, t: 'TOTP security', d: 'Passwordless sign-in with your authenticator app.' },
   ]
   return (
-    <div className="auth-brand-panel relative z-10 flex h-full flex-col justify-between p-10 text-white xl:p-14">
+    <div className="auth-brand-panel relative z-10 flex h-full flex-col justify-between text-white">
       <p className="page-kicker">A MORE CONSIDERED WAY TO SEARCH</p>
       <div className="w-full">
         <h2 className="auth-text-shadow leading-snug tracking-tight">Your next move.<br /><span>A clearer plan.</span></h2>

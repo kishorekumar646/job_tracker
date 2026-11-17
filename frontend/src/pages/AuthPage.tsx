@@ -38,17 +38,15 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="auth-bg relative flex min-h-screen flex-col overflow-hidden">
+    <div className="auth-bg relative flex flex-col overflow-hidden">
       <JobConstellation className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.12]" />
       <AccountNavigation />
-      <div className="auth-layout relative z-10 flex flex-1">
-      <div className="hidden lg:block lg:w-[54%]">
-        <BrandPanel />
-      </div>
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
-        <div className="w-full animate-fade-up">
-          <div className="auth-card card p-5 sm:p-8">{children}</div>
+      <div className="auth-layout relative z-10 flex-1">
+        <div className="hidden min-w-0 self-stretch lg:block">
+          <BrandPanel />
         </div>
+        <div className="auth-form-panel relative z-10 min-w-0 animate-fade-up">
+          <div className="auth-card card p-5 sm:p-8">{children}</div>
         </div>
       </div>
     </div>
@@ -117,8 +115,8 @@ export function LoginPage() {
 
   return (
     <Shell>
-      <h1 className="text-3xl font-extrabold tracking-tight">Welcome back</h1>
-      <p className="mt-2 text-sm text-gray-400">{deviceMode ? 'Use the passkey you enabled in Settings > Security.' : 'Sign in with the 6-digit code from your authenticator app.'}</p>
+      <h1 className="text-center text-3xl font-extrabold tracking-tight">Welcome back</h1>
+      <p className="mt-2 text-center text-sm text-gray-400">{deviceMode ? 'Use the passkey you enabled in Settings > Security.' : 'Sign in with the 6-digit code from your authenticator app.'}</p>
       {deviceMode ? (
         <div className="mt-8 space-y-5">
           <ErrorBox msg={error} />
@@ -211,15 +209,15 @@ export function SignupPage() {
 
   return (
     <Shell>
-      <h1 className="text-3xl font-extrabold tracking-tight">Create your account</h1>
-      <ol className="mb-8 mt-6 flex items-center gap-2">
+      <h1 className="text-center text-3xl font-extrabold tracking-tight">Create your account</h1>
+      <ol aria-label="Account setup progress" className="mb-8 mt-6 grid grid-cols-3 text-center">
         {STEPS.map((s, i) => (
-          <li key={s} className="flex flex-1 items-center gap-2">
-            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${step > i + 1 ? 'bg-emerald-500 text-white' : step === i + 1 ? 'bg-brand-600 text-white shadow-glow' : 'bg-gray-700 text-gray-400'}`}>
+          <li key={s} aria-current={step === i + 1 ? 'step' : undefined} className="relative flex min-w-0 flex-col items-center gap-2">
+            <span className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${step > i + 1 ? 'bg-emerald-500 text-white' : step === i + 1 ? 'bg-brand-600 text-white shadow-glow' : 'bg-gray-700 text-gray-400'}`}>
               {step > i + 1 ? '✓' : i + 1}
             </span>
             <span className={`text-xs font-semibold ${step === i + 1 ? 'text-gray-50' : 'text-gray-500'}`}>{s}</span>
-            {i < STEPS.length - 1 && <span className={`h-px flex-1 ${step > i + 1 ? 'bg-emerald-500' : 'bg-gray-700'}`} />}
+            {i < STEPS.length - 1 && <span aria-hidden="true" className={`absolute left-1/2 top-3.5 h-px w-full ${step > i + 1 ? 'bg-emerald-500' : 'bg-gray-700'}`} />}
           </li>
         ))}
       </ol>
