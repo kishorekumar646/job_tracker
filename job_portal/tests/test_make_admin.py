@@ -47,6 +47,16 @@ async def test_unknown_account_is_not_created(client):
         assert await db.scalar(select(User).where(User.email == "missing@gmail.com")) is None
 
 
+@pytest.mark.parametrize("email", ["preview@gma", "", "previewgmail.com"])
+async def test_incomplete_email_is_rejected_before_database_lookup(monkeypatch, capsys, email):
+    def unexpected_lookup():
+        pytest.fail("Invalid email must not reach the database")
+
+    monkeypatch.setattr(make_admin, "async_session_factory", unexpected_lookup)
+    assert await make_admin.main(email, "123456") == 1
+    assert "complete email address" in capsys.readouterr().err
+
+
 def test_interactive_command_prompts_for_hidden_code(monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["createsuperuser"])
     prompts = []
@@ -61,3 +71,20 @@ def test_interactive_command_prompts_for_hidden_code(monkeypatch, capsys):
     assert make_admin.cli() == 0
     assert prompts == ["Enter Email: ", "Authenticator Code: "]
     assert "123456" not in capsys.readouterr().out
+
+
+def test_email_argument_is_forwarded_without_interactive_email_input(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["createsuperuser", "preview@gmail.com"])
+    monkeypatch.setattr(make_admin, "getpass", lambda prompt: "123456")
+
+    def unexpected_prompt(prompt):
+        pytest.fail("An explicit email argument must not prompt for email")
+
+    monkeypatch.setattr("builtins.input", unexpected_prompt)
+
+    async def promote(email, code):
+        assert (email, code) == ("preview@gmail.com", "123456")
+        return 0
+
+    monkeypatch.setattr(make_admin, "main", promote)
+    assert make_admin.cli() == 0

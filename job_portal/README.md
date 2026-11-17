@@ -27,6 +27,10 @@ Only activated, active accounts with a valid code are promoted. Sign out and bac
 The legacy `python tools/make_admin.py <email>` command now prompts for the code too.
 For production, configure the backend with Render's Supabase `DATABASE_URL` before running;
 otherwise this command affects only your local database. Keep database credentials private.
+The command identifies whether it is using SQLite or PostgreSQL without printing credentials,
+and rejects incomplete email addresses before any database lookup. You can also pass the email
+explicitly as `python createsuperuser "you@gmail.com"`; only the authenticator code is then prompted.
+An exported `DATABASE_URL` in your shell takes precedence over the `.env` value.
 
 ## How it works
 
