@@ -11,7 +11,7 @@ function InstallPrivacy() {
     <details className="install-privacy">
       <summary><ShieldCheck size={16} aria-hidden="true" />Before you install: privacy & device access</summary>
       <ul>
-        <li><strong>Check the address.</strong> Install only from the JobPilot address you trust. This page is on <code>{window.location.hostname}</code>. HTTPS protects the connection; it is not a guarantee that a site is trustworthy.</li>
+        <li><strong>Check the address.</strong> This page is on <code>{window.location.hostname}</code>. Install directly through your browser. Use JobPilot over HTTPS to keep data encrypted in transit.</li>
         <li><strong>Your choice.</strong> This is a browser-installed web app, not an APK or a download from an app store. You can keep using the website without installing.</li>
         <li><strong>Device access.</strong> Installation does not ask for contacts, camera or microphone access. Resume and photo uploads use files you choose. Optional passkeys use your device&apos;s verification; fingerprints and face scans are not sent to JobPilot.</li>
         <li><strong>Account data stays online.</strong> Your profile, resume and tracker records are stored on the server. JobPilot&apos;s service-worker cache stores icons and an offline notice, not account pages, resumes or payment data. Live features need internet.</li>
