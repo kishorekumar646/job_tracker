@@ -365,7 +365,7 @@ export function TotpTimer() {
 export interface DateRange { start: string; end: string }
 export const ALL_TIME: DateRange = { start: '', end: '' }
 
-export function FilterBar({ children, active, onClear, summary }: { children: ReactNode; active: boolean; onClear: () => void; summary?: string }) {
+export function FilterBar({ children, active, onClear, summary, actions }: { children: ReactNode; active: boolean; onClear: () => void; summary?: string; actions?: ReactNode }) {
   return (
     <section aria-label="Filters" className="filter-bar mb-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -373,6 +373,7 @@ export function FilterBar({ children, active, onClear, summary }: { children: Re
         <div className="flex flex-wrap items-center gap-3">
           {summary && <p aria-live="polite" className="text-xs text-gray-400">{summary}</p>}
           {active && <button type="button" className="filter-clear" onClick={onClear}><X className="h-3.5 w-3.5" />Clear filters</button>}
+          {actions}
         </div>
       </div>
       <div className="flex flex-wrap items-end gap-4">{children}</div>

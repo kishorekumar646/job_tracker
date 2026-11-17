@@ -216,6 +216,8 @@ Dashboard and application date filters have labeled date inputs, immediate prese
 Jobs, applications and admin lists share labeled filter groups, selected-state chips, result
 summaries and **Clear filters**. On phones, chip groups become compact native selects.
 Search and non-date filters still update automatically; background refreshes retain selections.
+Admin user filters give Account status its own full-width row below Search users and Role;
+Add user stays in the filter header so it does not crowd or misalign the filter controls.
 
 Page and tab entrances do not replay on background data refreshes. Reduced-motion preferences
 disable CSS animation and smooth scrolling throughout the app, and pause the authentication

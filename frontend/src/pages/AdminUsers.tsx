@@ -272,14 +272,14 @@ export function UsersTab() {
         ))}
       </div>
 
-      <FilterBar active={!!filtersOn} onClear={() => { setSearch(''); setRole('all'); setStatusF('all'); setPage(1) }} summary={`${filtered.length} of ${users.length} user${users.length === 1 ? '' : 's'}`}>
+      <FilterBar active={!!filtersOn} onClear={() => { setSearch(''); setRole('all'); setStatusF('all'); setPage(1) }} summary={`${filtered.length} of ${users.length} user${users.length === 1 ? '' : 's'}`}
+        actions={<button className="btn-primary btn-sm" onClick={() => setCreating(true)}><UserPlus className="h-4 w-4" />Add user</button>}>
         <FilterField label="Search users"><div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
-          <input type="search" className="input pl-9" placeholder="Search by email or name…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
+          <input type="search" className="input pl-9 sm:py-3" placeholder="Search by email or name…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
         </div></FilterField>
         <FilterChips label="Role" value={role} onChange={(value) => { setRole(value); setPage(1) }} options={[{ value: 'all', label: 'All roles' }, { value: 'user', label: 'User' }, { value: 'admin', label: 'Admin' }]} />
-        <FilterChips label="Account status" value={statusF} onChange={(value) => { setStatusF(value); setPage(1) }} options={(['all', 'pending', 'active', 'inactive', 'online', 'offline'] as const).map((s) => ({ value: s, label: s === 'all' ? 'All statuses' : s === 'pending' ? `Not activated${pending ? ` (${pending})` : ''}` : s[0].toUpperCase() + s.slice(1) }))} />
-        <button className="btn-primary btn-sm ml-auto" onClick={() => setCreating(true)}><UserPlus className="h-4 w-4" />Add user</button>
+        <FilterChips label="Account status" value={statusF} onChange={(value) => { setStatusF(value); setPage(1) }} wide options={(['all', 'pending', 'active', 'inactive', 'online', 'offline'] as const).map((s) => ({ value: s, label: s === 'all' ? 'All statuses' : s === 'pending' ? `Not activated${pending ? ` (${pending})` : ''}` : s[0].toUpperCase() + s.slice(1) }))} />
       </FilterBar>
 
       <div className="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900">
