@@ -33,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...auth import auth_manager
 from ...database import get_async_db, settings
 from ...deps import require_admin
-from ...models import BankEntry, WebhookLog, Application, AutoApplyRun, AutoApplyRunJob, Feedback, Job, JobPreference, Notification, Order, Passkey, PasskeyChallenge, Subscription, Transaction, SocialAccount, User, UserProfile
+from ...models import BankEntry, WebhookLog, Application, AutoApplyRun, AutoApplyRunJob, Feedback, Job, JobPreference, Notification, Order, Passkey, PasskeyChallenge, RefreshSession, Subscription, Transaction, SocialAccount, User, UserProfile
 from ...schemas import AdminCreateUser, AdminNameUpdate, AdminRoleUpdate, AdminTotpResult, AdminUserDetail, AdminUserList, AdminUserOut, AdminOrderOut, WebhookLogOut
 from ...schemas import AdminFeedbackOut, FeedbackList, FeedbackOut, FeedbackUpdate
 from ...services.billing import expire_old, mark_paid, pending_by_amount
@@ -147,6 +147,7 @@ async def toggle_status(user_id: int, admin: User = Depends(require_admin), db: 
     user.is_active = not user.is_active
     if not user.is_active:
         user.refresh_token = None
+        await db.execute(delete(RefreshSession).where(RefreshSession.user_id == user.id))
     await db.commit()
     return await _out(db, user)
 
@@ -227,6 +228,7 @@ async def reset_totp(user_id: int, db: AsyncSession = Depends(get_async_db)):
     user = await _get(db, user_id)
     user.totp_secret = auth_manager.new_totp_secret()
     user.refresh_token = None
+    await db.execute(delete(RefreshSession).where(RefreshSession.user_id == user.id))
     await db.execute(delete(Passkey).where(Passkey.user_id == user.id))
     await db.execute(delete(PasskeyChallenge).where(PasskeyChallenge.user_id == user.id))
     await db.commit()

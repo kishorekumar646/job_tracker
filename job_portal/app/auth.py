@@ -41,7 +41,7 @@ class AuthManager:
         except Exception:
             return False
 
-    def _encode(self, user_id: int, token_type: str, expires: timedelta, role: str = "user") -> str:
+    def _encode(self, user_id: int, token_type: str, expires: timedelta, role: str = "user", session_id: Optional[str] = None) -> str:
         now = datetime.now(timezone.utc)
         payload = {
             "sub": str(user_id),
@@ -51,13 +51,15 @@ class AuthManager:
             "iat": now,
             "exp": now + expires,
         }
+        if session_id is not None:
+            payload["sid"] = session_id
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
     def create_access_token(self, user_id: int, role: str = "user") -> str:
         return self._encode(user_id, "access", timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES), role)
 
-    def create_refresh_token(self, user_id: int) -> str:
-        return self._encode(user_id, "refresh", timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES))
+    def create_refresh_token(self, user_id: int, session_id: Optional[str] = None) -> str:
+        return self._encode(user_id, "refresh", timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES), session_id=session_id)
 
     def verify_token(self, token: str, token_type: str = "access") -> Optional[dict]:
         try:

@@ -14,7 +14,8 @@ Authentication routes, mounted at ``/api/v1/auth``.
 
 import time
 import logging
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict, deque
 from typing import Optional
 
@@ -26,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...auth import auth_manager
 from ...database import get_async_db, settings
 from ...deps import get_current_user
-from ...models import JobPreference, Passkey, User, UserProfile
+from ...models import JobPreference, Passkey, RefreshSession, User, UserProfile
 from ...services import email_verification as ev
 from ...services import passkeys as pk
 from ...schemas import ActivationResponse, AuthResponse, EmailCodeRequest, EmailSendResult, NameUpdate, OtpRequest, PasskeyCode, PasskeyFinish, PasskeyOut, SignupRequest, SignupResponse, UserOut
@@ -36,6 +37,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 _ATTEMPT_LIMIT = 10
 _ATTEMPT_WINDOW = 60
 _attempts: dict[str, deque] = defaultdict(deque)
+_REFRESH_REUSE_WINDOW = timedelta(seconds=60)
 
 
 def _rate_limit(request: Request, bucket: str) -> None:
@@ -57,20 +59,55 @@ def _set_cookie(response: Response, key: str, value: str, max_age: int) -> None:
     )
 
 
-async def _issue_session(response: Response, user: User, db: AsyncSession) -> AuthResponse:
+def _session_response(response: Response, user: User, refresh: str) -> AuthResponse:
     response.headers["Cache-Control"] = "no-store"
     access = auth_manager.create_access_token(user.id, user.role)
-    refresh = auth_manager.create_refresh_token(user.id)
-    user.refresh_token = refresh
-    await db.commit()
+    refresh_payload = auth_manager.verify_token(refresh, "refresh")
+    if not refresh_payload:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session expired. Please sign in again.")
     _set_cookie(response, "access_token", access, settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    _set_cookie(response, "refresh_token", refresh, settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60)
+    _set_cookie(response, "refresh_token", refresh, max(0, refresh_payload["exp"] - int(time.time())))
     return AuthResponse(
         user=UserOut.model_validate(user),
         expires_at=auth_manager.verify_token(access)["exp"] * 1000,
-        refresh_expires_at=auth_manager.verify_token(refresh, "refresh")["exp"] * 1000,
+        refresh_expires_at=refresh_payload["exp"] * 1000,
         server_time=int(time.time() * 1000),
     )
+
+
+def _refresh_expiry(token: str) -> datetime:
+    return datetime.fromtimestamp(auth_manager.verify_token(token, "refresh")["exp"], timezone.utc).replace(tzinfo=None)
+
+
+async def _stored_session(db: AsyncSession, user_id: int, payload: dict) -> Optional[RefreshSession]:
+    session_id = payload.get("sid", payload.get("jti"))
+    if not isinstance(session_id, str):
+        return None
+    return await db.scalar(select(RefreshSession).where(
+        RefreshSession.id == session_id, RefreshSession.user_id == user_id,
+    ).execution_options(populate_existing=True))
+
+
+def _valid_refresh(session: RefreshSession, token: str, now: datetime) -> bool:
+    return session.expires_at > now and (
+        session.refresh_token == token or (
+            session.previous_refresh_token == token and session.rotated_at is not None
+            and now - session.rotated_at < _REFRESH_REUSE_WINDOW
+        )
+    )
+
+
+async def _issue_session(response: Response, user: User, db: AsyncSession) -> AuthResponse:
+    session_id = uuid.uuid4().hex
+    refresh = auth_manager.create_refresh_token(user.id, session_id)
+    await db.execute(delete(RefreshSession).where(
+        RefreshSession.user_id == user.id, RefreshSession.expires_at <= datetime.utcnow(),
+    ))
+    db.add(RefreshSession(
+        id=session_id, user_id=user.id, refresh_token=refresh, expires_at=_refresh_expiry(refresh),
+    ))
+    await db.commit()
+    return _session_response(response, user, refresh)
 
 
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
@@ -226,9 +263,41 @@ async def refresh(
     if not payload:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
     user = await db.scalar(select(User).where(User.id == int(payload["sub"])))
-    if not user or not user.is_active or user.refresh_token != refresh_token:
+    if not user or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session no longer valid")
-    return await _issue_session(response, user, db)
+    now = datetime.utcnow()
+    session = await _stored_session(db, user.id, payload)
+    if session is None and "sid" not in payload and isinstance(payload.get("jti"), str):
+        # Atomically adopt a pre-upgrade cookie without requiring another sign-in.
+        adopted = await db.execute(update(User).where(
+            User.id == user.id, User.refresh_token == refresh_token,
+        ).values(refresh_token=None))
+        if adopted.rowcount:
+            session = RefreshSession(
+                id=payload["jti"], user_id=user.id, refresh_token=refresh_token,
+                expires_at=_refresh_expiry(refresh_token),
+            )
+            db.add(session)
+            await db.flush()
+        else:
+            session = await _stored_session(db, user.id, payload)
+    if session is None or not _valid_refresh(session, refresh_token, now):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session no longer valid")
+
+    # A rotation is shared briefly by concurrent requests/tabs, not repeated by each.
+    if session.rotated_at is None or now - session.rotated_at >= _REFRESH_REUSE_WINDOW:
+        replacement = auth_manager.create_refresh_token(user.id, session.id)
+        await db.execute(update(RefreshSession).where(
+            RefreshSession.id == session.id, RefreshSession.refresh_token == session.refresh_token,
+        ).values(
+            previous_refresh_token=session.refresh_token, refresh_token=replacement,
+            rotated_at=now, expires_at=_refresh_expiry(replacement),
+        ).execution_options(synchronize_session=False))
+        session = await _stored_session(db, user.id, payload)
+        if session is None or not _valid_refresh(session, refresh_token, now):
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session no longer valid")
+    await db.commit()
+    return _session_response(response, user, session.refresh_token)
 
 
 @router.post("/logout")
@@ -242,7 +311,11 @@ async def logout(
         if payload:
             user = await db.scalar(select(User).where(User.id == int(payload["sub"])))
             if user:
-                user.refresh_token = None
+                session = await _stored_session(db, user.id, payload)
+                if session and _valid_refresh(session, refresh_token, datetime.utcnow()):
+                    await db.delete(session)
+                if user.refresh_token == refresh_token:
+                    user.refresh_token = None
                 await db.commit()
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
@@ -255,7 +328,10 @@ async def me(user: User = Depends(get_current_user)):
 
 
 @router.get("/session", response_model=AuthResponse)
-async def session_info(request: Request, response: Response, user: User = Depends(get_current_user)):
+async def session_info(
+    request: Request, response: Response, user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
     token = request.cookies.get("access_token")
     if not token:
         token = request.headers.get("authorization", "")[7:].strip()
@@ -263,10 +339,11 @@ async def session_info(request: Request, response: Response, user: User = Depend
     if not payload:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session expired. Please sign in again.")
     refresh_token = request.cookies.get("refresh_token")
-    refresh_payload = (
-        auth_manager.verify_token(refresh_token, "refresh")
-        if refresh_token and refresh_token == user.refresh_token else None
-    )
+    refresh_payload = auth_manager.verify_token(refresh_token, "refresh") if refresh_token else None
+    if refresh_payload:
+        session = await _stored_session(db, user.id, refresh_payload)
+        if not (session and _valid_refresh(session, refresh_token, datetime.utcnow())) and refresh_token != user.refresh_token:
+            refresh_payload = None
     response.headers["Cache-Control"] = "no-store"
     return AuthResponse(
         user=UserOut.model_validate(user), expires_at=payload["exp"] * 1000,

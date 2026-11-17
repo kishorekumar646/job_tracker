@@ -12,7 +12,7 @@ from sqlalchemy import select, text
 
 from app.database import async_engine, async_session_factory, database_url, settings
 from app.main import upgrade_columns
-from app.models import AutoApplyRun, UserProfile
+from app.models import AutoApplyRun, AutoApplyRunJob, UserProfile
 from app.services import email_verification as ev
 from app.services.frontend import FrontendFiles
 from helpers import register
@@ -133,6 +133,30 @@ async def test_schema_upgrade_handles_existing_rows(client, user):
         assert await conn.scalar(text("SELECT resume_data FROM user_profiles LIMIT 1")) is None
     legacy = (await client.get(f"/api/v1/auto-apply/runs/{run_id}")).json()
     assert legacy["applied"] == 2 and legacy["details_recorded"] is False and legacy["jobs"] == []
+
+
+async def test_run_application_details_upgrade_preserves_older_snapshots(client, user):
+    async with async_session_factory() as db:
+        run = AutoApplyRun(user_id=user["id"], applied=1, jobs=[AutoApplyRunJob(
+            title="Older role", company="Older company", source="linkedin",
+            external_link="https://example.test/older", match_score=80, outcome="applied",
+        )])
+        db.add(run)
+        await db.commit()
+        run_id = run.id
+    async with async_engine.begin() as conn:
+        await conn.execute(text("ALTER TABLE applications DROP COLUMN auto_apply_run_job_id"))
+        for column in ("application_id", "applied_at", "job_details"):
+            await conn.execute(text(f"ALTER TABLE auto_apply_run_jobs DROP COLUMN {column}"))
+        await conn.run_sync(upgrade_columns)
+        await conn.run_sync(upgrade_columns)
+        assert await conn.scalar(text("SELECT auto_apply_run_job_id FROM applications LIMIT 1")) is None
+    response = await client.get(f"/api/v1/auto-apply/runs/{run_id}")
+    assert response.status_code == 200 and response.json()["details_recorded"] is True
+    snapshot = response.json()["jobs"][0]
+    assert snapshot["title"] == "Older role" and snapshot["company"] == "Older company"
+    assert snapshot["application_id"] is None and snapshot["applied_at"] is None
+    assert snapshot["job_details"] is None and snapshot["application"] is None
 
 
 async def test_resume_survives_without_upload_directory(client, user, tmp_path, monkeypatch):

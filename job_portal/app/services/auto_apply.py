@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from ..database import async_session_factory
 from ..models import Application, AutoApplyRun, AutoApplyRunJob, Job, JobPreference, SocialAccount, User, UserProfile
+from ..schemas import AutoApplyRunJobDetails
 from .job_feed import FEED_PREFIXES, sync_for_preferences
 from .matching import score_job
 from .plans import daily_apply_cap, lifetime_apply_cap
@@ -119,24 +120,28 @@ async def run_auto_apply(db: AsyncSession, user: User, trigger: str = "manual") 
         ranked.append((result.score, job))
 
     ranked.sort(key=lambda r: r[0], reverse=True)
+    captured: list[tuple[AutoApplyRunJob, Application]] = []
     for score, job in ranked[:remaining]:
         queued = (job.external_id or "").startswith(FEED_PREFIXES)
         if queued:
             # Real postings can't be submitted on the user's behalf: queue them to finish on the employer's page.
-            db.add(Application(
+            application = Application(
                 user_id=user.id, job_id=job.id, match_score=score, auto_applied=True, status="to_apply",
                 notes=f"Queued by auto-apply (match {score}%). Open the posting to submit, then mark as Applied.",
-            ))
+            )
         else:
-            db.add(Application(
+            application = Application(
                 user_id=user.id, job_id=job.id, match_score=score, auto_applied=True,
                 notes=f"Auto-applied via {job.source.title()} (match {score}%)",
-            ))
-        run.jobs.append(AutoApplyRunJob(
+            )
+        snapshot = AutoApplyRunJob(
             title=job.title, company=job.company, location=job.location,
             source=job.source, external_link=job.job_url, match_score=score,
             outcome="to_apply" if queued else "applied",
-        ))
+            job_details=AutoApplyRunJobDetails.model_validate(job).model_dump(mode="json"),
+        )
+        run.jobs.append(snapshot)
+        captured.append((snapshot, application))
         run.applied += 1
     run.skipped += max(0, len(ranked) - remaining)
 
@@ -144,6 +149,15 @@ async def run_auto_apply(db: AsyncSession, user: User, trigger: str = "manual") 
         f"Matched and queued {run.applied} job{'s' if run.applied != 1 else ''}"
         if run.applied else "No new jobs matched your resume and preferences"
     )
+    if captured:
+        await db.flush()
+        for snapshot, application in captured:
+            application.auto_apply_run_job_id = snapshot.id
+            db.add(application)
+        await db.flush()
+        for snapshot, application in captured:
+            snapshot.application_id = application.id
+            snapshot.applied_at = application.applied_at
     await db.commit()
     await db.refresh(run)
     logger.info("auto-apply user=%s trigger=%s applied=%s", user.id, trigger, run.applied)

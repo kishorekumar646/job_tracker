@@ -44,8 +44,12 @@ An exported `DATABASE_URL` in your shell takes precedence over the `.env` value.
 ### Automatic run timing
 
 The **Automatic run schedule** card at the top of Auto-apply shows the server's actual configured
-interval and an **Enable automatic runs** switch. Enabled, ready accounts see the next server check
-in their browser's local time zone with an explicit 12-hour AM/PM clock, or an in-progress indicator during a sweep. This is a shared
+interval and an **Enable automatic runs** switch. Schedule, Run preferences and usage appear side by
+side on desktop and stack on smaller screens; scheduling explanations expand on demand.
+Whole-hour intervals use hours (for example, 600 minutes appears as **Every 10 hours**); other intervals retain minutes.
+The next server check is visible even when the account is paused or setup is incomplete,
+in the browser's local time zone with an explicit 12-hour AM/PM clock, or an in-progress indicator during a sweep.
+Paused accounts do not run; enable the switch and complete setup to participate. This is a shared
 interval, not a user-selectable daily clock time. The first check is one interval after startup;
 later checks are one interval after the preceding sweep finishes. Restarting resets the timer.
 The displayed check starts processing eligible accounts in turn, not every account at that exact
@@ -63,18 +67,30 @@ No hosting plan or deployment setting is changed by the account switch.
 
 ### Auto-apply run history
 
-Expand a run under Auto-apply > Run history to see its exact start time, trigger, evaluated/
-skipped totals, message and the jobs added to the tracker. Each job shows its title, company,
-location, source, match score, outcome and original posting link.
+The latest recorded run opens automatically under Auto-apply > Run history. Each run has an
+application table with platform, role/company, apply date, application ID, current tracker status
+and actions. On phones the same information stacks into labeled rows. Select a role or **View details**
+to expand its advertised package (INR LPA), location, job type, remote flag, experience, skills,
+posting date, description and match score. Package fields that a posting omits say **Not disclosed**.
+The original posting remains available through the row's external-link action.
+
+New runs save immutable job details, the exact application ID and its tracker creation date.
+Current linked status, notes, interview date and offer package are shown separately and refresh
+with the page's normal visible-tab sync. A durable run-snapshot link on the application prevents
+later reused/deleted tracker IDs from being matched to the wrong history row.
+Apply dates are tracker timestamps, not verified external submission dates.
 **Queued for submission** means the user must finish applying on the employer's website;
 **Recorded as applied** is a tracker record, not proof of an external submission.
-Outcomes are snapshots from the run, not the application's current pipeline status.
+Outcomes and advertised job details are snapshots from the run, not current tracker/posting values.
 
 New manual and scheduled runs save job snapshots atomically with their applications. The history
 survives later edits/deletion of a job or tracker entry, but is removed when the account is deleted.
 `GET /api/v1/auto-apply/runs/{id}` returns details only for the signed-in user's run.
 Older runs retain their totals and explicitly report that job-by-job details were not saved;
 timestamps are not used to guess which applications belonged to them.
+Runs with older title/company snapshots retain those rows, but clearly mark unrecorded application
+IDs, dates, salary and extended details as unavailable. Deleting a tracker entry removes its live
+status/notes from history without deleting its original saved job details.
 
 ## Limitations
 
@@ -159,7 +175,12 @@ A banner appears at the top during the last five minutes of access-token validit
 **Refresh session** and dismiss controls. Access expiry automatically attempts renewal; ordinary
 401 responses also renew and replay through the same shared refresh request. A network/server
 failure does not log the user out; an explicitly rejected refresh requires signing in again.
-Refresh rotation starts a new refresh lifetime (seven days by default).
+Refresh rotation starts a new refresh lifetime (seven days by default). Each sign-in has its own
+database-backed refresh session, so signing in or refreshing on another device does not revoke it.
+Concurrent refreshes share the same rotation for 60 seconds; the immediately previous cookie is
+accepted only during that window, preventing tabs from logging each other out. After the window,
+old rotated cookies are rejected. Logging out revokes only the current device session; admin
+deactivation or authenticator reset revokes all of the account's refresh sessions.
 
 `GET /api/v1/auth/session` restores expiry metadata on reload without rotating the session.
 Login, refresh and session responses expose only timestamps alongside the public user, never
@@ -169,8 +190,24 @@ refresh cookie renews access automatically. During session restoration, timeouts
 server errors and hosting startup HTML keep the page in a reconnecting state, not the login
 screen. Restoration retries every 15 seconds while visible/online, on return/reconnect, or manually.
 Only a confirmed authentication rejection ends restoration as signed out. Signing out, a revoked
-refresh token or signing into another device (the current backend stores one refresh token per
-account) can still require sign-in before seven days.
+or expired refresh token, deleted browser cookies, or an admin deactivation/authenticator reset
+can still require sign-in before seven days. Existing valid pre-upgrade refresh cookies are
+adopted on their next renewal without requiring another sign-in. A cookie already invalidated
+before the upgrade cannot be recovered; sign in once to establish a new session.
+
+### Gmail mailbox errors are separate
+
+The `job_portal.mail_poller` background task reads bank payment alerts, not JobPilot login sessions.
+Gmail's **Application-specific password required** error means that payment-email polling could
+not authenticate; it does not sign dashboard users out.
+
+Enable 2-Step Verification on the mailbox's Google account, create a
+[Google App Password](https://support.google.com/accounts/answer/185833), and set the backend's
+`IMAP_PASSWORD` to that 16-character password without spaces (not the Google account password).
+Keep it in the server's environment/secret settings, never source control or chat, then restart
+the backend. If the Google account does not offer App passwords, its account/organization policy
+must be addressed before using this Gmail IMAP integration. To turn off mailbox polling, clear
+`IMAP_HOST` and restart; this also stops email-based payment verification.
 
 ## Admin Pro access and live totals
 

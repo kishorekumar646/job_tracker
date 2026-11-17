@@ -152,17 +152,33 @@ export interface AutoApplyRun {
   details_recorded: boolean
 }
 
+export interface AutoApplyRunJob {
+  id: number
+  title: string
+  company: string
+  location: string | null
+  source: JobSource
+  external_link: string
+  match_score: number
+  outcome: 'applied' | 'to_apply'
+  application_id: number | null
+  applied_at: string | null
+  job_details: {
+    description: string | null
+    salary_min_lpa: number | null
+    salary_max_lpa: number | null
+    job_type: string | null
+    is_remote: boolean | null
+    experience_min: number | null
+    experience_max: number | null
+    skills: string[] | null
+    posted_date: string | null
+  } | null
+  application: Pick<Application, 'id' | 'status' | 'notes' | 'interview_date' | 'offer_salary_lpa' | 'applied_at' | 'updated_at'> | null
+}
+
 export interface AutoApplyRunDetail extends AutoApplyRun {
-  jobs: {
-    id: number
-    title: string
-    company: string
-    location: string | null
-    source: JobSource
-    external_link: string
-    match_score: number
-    outcome: 'applied' | 'to_apply'
-  }[]
+  jobs: AutoApplyRunJob[]
 }
 
 export interface AutoApplyStatus {

@@ -3,18 +3,13 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Building2, CheckCircle2, ExternalLink, MapPin, Plus, RefreshCw, Search, Trash2, Wallet } from 'lucide-react'
 import { applicationsApi, jobsApi, type JobFilters } from '../api'
 import { errorMessage } from '../api/client'
-import { EmptyState, Field, FilterBar, FilterChips, FilterField, JOB_TYPE_LABEL, MatchBadge, Modal, PageHeader, PageLoader, PlatformLogo, Spinner, TagInput, timeAgo } from '../components/ui'
+import { EmptyState, Field, FilterBar, FilterChips, FilterField, JOB_TYPE_LABEL, MatchBadge, Modal, PageHeader, PageLoader, PlatformLogo, salary, Spinner, TagInput, timeAgo } from '../components/ui'
 import { toast } from '../store/toastStore'
 import type { Job, JobSource, JobType } from '../types'
 import { useDataRefresh } from '../hooks/useDataRefresh'
 
 const PAGE = 20
 const SOURCES: JobSource[] = ['linkedin', 'naukri', 'indeed', 'glassdoor', 'foundit', 'instahyre', 'manual']
-
-function salary(j: Job) {
-  if (j.salary_min_lpa == null && j.salary_max_lpa == null) return null
-  return `₹${j.salary_min_lpa ?? j.salary_max_lpa}${j.salary_max_lpa && j.salary_min_lpa ? `–${j.salary_max_lpa}` : ''} LPA`
-}
 
 export default function Jobs() {
   const [jobs, setJobs] = useState<Job[] | null>(null)

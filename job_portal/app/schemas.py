@@ -353,6 +353,30 @@ class AutoApplyRunOut(BaseModel):
     details_recorded: bool = False
 
 
+class AutoApplyRunJobDetails(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    description: Optional[str] = None
+    salary_min_lpa: Optional[float] = None
+    salary_max_lpa: Optional[float] = None
+    job_type: Optional[str] = None
+    is_remote: Optional[bool] = None
+    experience_min: Optional[int] = None
+    experience_max: Optional[int] = None
+    skills: Optional[list[str]] = None
+    posted_date: Optional[UTCDateTime] = None
+
+
+class AutoApplyRunApplicationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    status: ApplicationStatusLiteral
+    notes: Optional[str] = None
+    interview_date: Optional[UTCDateTime] = None
+    offer_salary_lpa: Optional[float] = None
+    applied_at: UTCDateTime
+    updated_at: UTCDateTime
+
+
 class AutoApplyRunJobOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -363,6 +387,10 @@ class AutoApplyRunJobOut(BaseModel):
     external_link: str
     match_score: int
     outcome: Literal["applied", "to_apply"]
+    application_id: Optional[int] = None
+    applied_at: Optional[UTCDateTime] = None
+    job_details: Optional[AutoApplyRunJobDetails] = None
+    application: Optional[AutoApplyRunApplicationOut] = None
 
 
 class AutoApplyRunDetail(AutoApplyRunOut):

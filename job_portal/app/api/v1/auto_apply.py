@@ -15,8 +15,8 @@ from sqlalchemy.orm import selectinload
 
 from ...database import get_async_db, settings
 from ...deps import get_current_user
-from ...models import AutoApplyRun, JobPreference, User
-from ...schemas import AutoApplyRunDetail, AutoApplyRunOut, AutoApplyStatus
+from ...models import Application, AutoApplyRun, JobPreference, User
+from ...schemas import AutoApplyRunApplicationOut, AutoApplyRunDetail, AutoApplyRunOut, AutoApplyStatus
 from ...services.plans import lifetime_apply_cap
 from ...services.auto_apply import applied_today, auto_applied_total, readiness_blockers, run_auto_apply
 
@@ -83,4 +83,18 @@ async def run_details(
     )
     if not run:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Run not found")
-    return AutoApplyRunDetail.model_validate(run)
+    detail = AutoApplyRunDetail.model_validate(run)
+    if detail.jobs:
+        applications = (await db.scalars(
+            select(Application).where(
+                Application.user_id == user.id,
+                Application.auto_apply_run_job_id.in_([job.id for job in detail.jobs]),
+            )
+        )).all()
+        by_snapshot = {
+            application.auto_apply_run_job_id: AutoApplyRunApplicationOut.model_validate(application)
+            for application in applications
+        }
+        for job in detail.jobs:
+            job.application = by_snapshot.get(job.id)
+    return detail

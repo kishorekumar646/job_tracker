@@ -84,7 +84,18 @@ class User(Base):
     )
     passkeys: Mapped[list["Passkey"]] = relationship(cascade="all, delete-orphan")
     passkey_challenges: Mapped[list["PasskeyChallenge"]] = relationship(cascade="all, delete-orphan")
+    refresh_sessions: Mapped[list["RefreshSession"]] = relationship(cascade="all, delete-orphan")
     feedback: Mapped[list["Feedback"]] = relationship(cascade="all, delete-orphan")
+
+
+class RefreshSession(Base):
+    __tablename__ = "refresh_sessions"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    refresh_token: Mapped[str] = mapped_column(String)
+    previous_refresh_token: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    rotated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class Feedback(Base):
@@ -210,6 +221,7 @@ class Application(Base):
     offer_salary_lpa: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     match_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     auto_applied: Mapped[bool] = mapped_column(Boolean, default=False)
+    auto_apply_run_job_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     applied_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -249,6 +261,9 @@ class AutoApplyRunJob(Base):
     external_link: Mapped[str] = mapped_column(String)
     match_score: Mapped[int] = mapped_column(Integer)
     outcome: Mapped[str] = mapped_column(String)
+    application_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    applied_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    job_details: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     run: Mapped[AutoApplyRun] = relationship(back_populates="jobs")
 

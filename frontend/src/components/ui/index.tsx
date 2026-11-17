@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { AlertCircle, CalendarDays, CheckCircle2, Info, ListFilter, Loader2, Plus, X } from 'lucide-react'
 import { useToastStore } from '../../store/toastStore'
 import { THEMES, useThemeStore } from '../../store/themeStore'
-import type { ApplicationStatus, JobSource } from '../../types'
+import type { ApplicationStatus, Job, JobSource } from '../../types'
 
 export function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
   return <Loader2 className={`animate-spin ${className}`} />
@@ -90,17 +90,17 @@ export function PageLoader({ variant = 'list', page = false }: { variant?: PageL
         {(variant === 'list' || variant === 'applications') && <div className="card px-4 sm:px-5"><ApplicationRowsShimmer /></div>}
         {variant === 'auto-apply' && (
           <>
-            <div className="card card-pad space-y-5">
-              <div className="flex items-center gap-3"><Shimmer className="h-11 w-11 shrink-0 rounded-xl" /><Shimmer className="h-5 w-48 max-w-full flex-1" /><Shimmer className="h-7 w-12 shrink-0 rounded-full" /></div>
-              <div className="flex flex-wrap gap-3"><Shimmer className="h-6 w-28 rounded-full" /><Shimmer className="h-6 w-32" /></div>
-              <Shimmer className="h-4 w-2/3" /><Shimmer className="h-3 w-full" />
-            </div>
             <div className="grid gap-6 lg:grid-cols-3">
-              <div className="card card-pad space-y-6 lg:col-span-2">
+              <div className="card card-pad min-w-0 space-y-5">
+                <div className="flex items-center gap-3"><Shimmer className="h-5 w-32 max-w-full flex-1" /><Shimmer className="h-7 w-12 shrink-0 rounded-full" /></div>
+                <div className="flex flex-wrap gap-3"><Shimmer className="h-6 w-28 max-w-full rounded-full" /><Shimmer className="h-6 w-32 max-w-full" /></div>
+                <Shimmer className="h-4 w-2/3" /><Shimmer className="h-3 w-full" />
+              </div>
+              <div className="card card-pad min-w-0 space-y-6">
                 <Shimmer className="h-5 w-32 max-w-full" />
                 {Array.from({ length: 2 }, (_, i) => <div key={i} className="space-y-3"><Shimmer className="h-4 w-36 max-w-full" /><Shimmer className="h-2 w-full rounded-full" /></div>)}
               </div>
-              <div className="card card-pad space-y-4"><Shimmer className="h-5 w-24 max-w-full" /><Shimmer className="h-9 w-28 max-w-full" /><Shimmer className="h-2 w-full rounded-full" /><Shimmer className="h-4 w-32 max-w-full" /><Shimmer className="h-9 w-9 rounded-lg" /></div>
+              <div className="card card-pad min-w-0 space-y-4"><Shimmer className="h-5 w-24 max-w-full" /><Shimmer className="h-9 w-28 max-w-full" /><Shimmer className="h-2 w-full rounded-full" /><Shimmer className="h-4 w-32 max-w-full" /><Shimmer className="h-9 w-9 rounded-lg" /></div>
             </div>
             <div className="card card-pad"><Shimmer className="mb-4 h-5 w-32 max-w-full" /><ApplicationRowsShimmer /></div>
           </>
@@ -371,6 +371,13 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
 }
 
 export const JOB_TYPE_LABEL: Record<string, string> = { full_time: 'Full-time', part_time: 'Part-time', contract: 'Contract', internship: 'Internship' }
+
+export function salary({ salary_min_lpa: min, salary_max_lpa: max }: Pick<Job, 'salary_min_lpa' | 'salary_max_lpa'>) {
+  if (min == null && max == null) return null
+  if (min == null) return `Up to \u20b9${max} LPA`
+  if (max == null) return `From \u20b9${min} LPA`
+  return `\u20b9${min}${min === max ? '' : `\u2013${max}`} LPA`
+}
 
 export function timeAgo(iso: string | null): string {
   if (!iso) return ''

@@ -80,6 +80,138 @@ async def test_refresh(client, user):
     assert (await client.post(f"{API}/auth/refresh")).status_code == 200
 
 
+async def test_refresh_keeps_other_signed_in_devices_valid(client):
+    from httpx import ASGITransport, AsyncClient
+    from app.main import app
+
+    account, secret = await register(client)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as other:
+        login = await other.post(f"{API}/auth/login", json={
+            "email": account["email"], "otp": pyotp.TOTP(secret).now(),
+        })
+        assert login.status_code == 200
+        assert (await client.post(f"{API}/auth/refresh")).status_code == 200
+        assert (await other.post(f"{API}/auth/refresh")).status_code == 200
+        assert (await client.post(f"{API}/auth/logout")).status_code == 200
+        assert (await other.post(f"{API}/auth/refresh")).status_code == 200
+
+
+async def test_overlapping_refresh_requests_reuse_the_same_rotation(client, user):
+    original = client.cookies.get("refresh_token")
+    first = await client.post(f"{API}/auth/refresh")
+    assert first.status_code == 200
+    current = first.cookies.get("refresh_token")
+    assert current != original
+    for token in [original, current, original]:
+        response = await client.post(f"{API}/auth/refresh", headers={"Cookie": f"refresh_token={token}"})
+        assert response.status_code == 200
+        assert response.cookies.get("refresh_token") == current
+    assert (await client.get(f"{API}/auth/session")).json()["refresh_expires_at"] is not None
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+async def test_concurrent_refresh_rotates_atomically(client, user, monkeypatch, legacy):
+    import asyncio
+    from app.api.v1 import auth as auth_routes
+
+    original = client.cookies.get("refresh_token")
+    if legacy:
+        from app.auth import auth_manager
+        from app.database import async_session_factory
+        from app.models import User
+        original = auth_manager.create_refresh_token(user["id"])
+        async with async_session_factory() as db:
+            account = await db.get(User, user["id"])
+            account.refresh_token = original
+            await db.commit()
+    lookup = auth_routes._stored_session
+    ready = asyncio.Event()
+    reads = 0
+
+    async def synchronized_lookup(*args):
+        nonlocal reads
+        session = await lookup(*args)
+        reads += 1
+        if reads <= 2:
+            if reads == 2:
+                ready.set()
+            await asyncio.wait_for(ready.wait(), timeout=5)
+        return session
+
+    monkeypatch.setattr(auth_routes, "_stored_session", synchronized_lookup)
+    responses = await asyncio.gather(*[
+        client.post(f"{API}/auth/refresh", headers={"Cookie": f"refresh_token={original}"})
+        for _ in range(2)
+    ])
+    assert [r.status_code for r in responses] == [200, 200]
+    assert responses[0].cookies.get("refresh_token") == responses[1].cookies.get("refresh_token")
+    assert responses[0].cookies.get("refresh_token") != original
+
+
+async def test_refresh_rejects_old_rotation_after_grace_and_logged_out_cookie(client, user):
+    from datetime import datetime, timedelta
+    from sqlalchemy import select
+    from app.database import async_session_factory
+    from app.models import RefreshSession
+
+    original = client.cookies.get("refresh_token")
+    assert (await client.post(f"{API}/auth/refresh")).status_code == 200
+    current = client.cookies.get("refresh_token")
+    async with async_session_factory() as db:
+        session = await db.scalar(select(RefreshSession).where(RefreshSession.user_id == user["id"]))
+        session.rotated_at = datetime.utcnow() - timedelta(seconds=61)
+        await db.commit()
+    assert (await client.post(f"{API}/auth/refresh", headers={"Cookie": f"refresh_token={original}"})).status_code == 401
+    assert (await client.post(f"{API}/auth/refresh", headers={"Cookie": f"refresh_token={current}"})).status_code == 200
+    current = client.cookies.get("refresh_token")
+    assert (await client.post(f"{API}/auth/logout")).status_code == 200
+    assert (await client.post(f"{API}/auth/refresh", headers={"Cookie": f"refresh_token={current}"})).status_code == 401
+
+
+async def test_legacy_refresh_cookie_survives_upgrade_and_migrates(client, user):
+    from sqlalchemy import delete
+    from app.auth import auth_manager
+    from app.database import async_session_factory
+    from app.models import RefreshSession, User
+
+    legacy = auth_manager.create_refresh_token(user["id"])
+    async with async_session_factory() as db:
+        await db.execute(delete(RefreshSession).where(RefreshSession.user_id == user["id"]))
+        account = await db.get(User, user["id"])
+        account.refresh_token = legacy
+        await db.commit()
+    cookies = f"access_token={client.cookies.get('access_token')}; refresh_token={legacy}"
+    assert (await client.get(f"{API}/auth/session", headers={"Cookie": cookies})).json()["refresh_expires_at"] is not None
+    refreshed = await client.post(f"{API}/auth/refresh", headers={"Cookie": cookies})
+    assert refreshed.status_code == 200
+    assert "sid" in auth_manager.verify_token(refreshed.cookies.get("refresh_token"), "refresh")
+    assert (await client.post(f"{API}/auth/refresh", headers={"Cookie": cookies})).status_code == 200
+    async with async_session_factory() as db:
+        assert (await db.get(User, user["id"])).refresh_token is None
+
+
+@pytest.mark.parametrize("operation", ["deactivate", "reset-totp"])
+async def test_admin_revokes_all_device_refresh_sessions(client, operation):
+    from httpx import ASGITransport, AsyncClient
+    from app.main import app
+
+    user, secret = await register(client)
+    original = client.cookies.get("refresh_token")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as device:
+        assert (await device.post(f"{API}/auth/login", json={
+            "email": user["email"], "otp": pyotp.TOTP(secret).now(),
+        })).status_code == 200
+        await register(client, "boss@gmail.com", "Boss")
+        await _make_admin("boss@gmail.com")
+        if operation == "deactivate":
+            assert (await client.patch(f"{API}/admin/users/{user['id']}/status")).status_code == 200
+            assert (await client.patch(f"{API}/admin/users/{user['id']}/status")).status_code == 200
+        else:
+            assert (await client.post(f"{API}/admin/users/{user['id']}/reset-totp")).status_code == 200
+        assert (await device.post(f"{API}/auth/refresh")).status_code == 401
+        assert (await device.post(f"{API}/auth/refresh", headers={"Cookie": f"refresh_token={original}"})).status_code == 401
+
+
 async def test_session_expiry_metadata_survives_reload_and_refresh(client, user):
     from app.auth import auth_manager
 
@@ -402,6 +534,7 @@ async def test_auto_apply_end_to_end(client, user):
 
 
 async def test_auto_apply_run_job_details_persist_and_are_private(client, user, monkeypatch):
+    from datetime import datetime
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
     from sqlalchemy import func, select, update
@@ -423,6 +556,9 @@ async def test_auto_apply_run_job_details_persist_and_are_private(client, user, 
         recorded = Job(
             title="Recorded role", company="Recorded company", location="Remote", source="linkedin",
             job_url="https://example.test/recorded",
+            description="Build Python services.", salary_min_lpa=12, salary_max_lpa=20,
+            job_type="full_time", is_remote=True, experience_min=2, experience_max=5,
+            skills=["Python", "FastAPI"], posted_date=datetime(2026, 1, 1, 9),
         )
         db.add_all([recorded, Job(
             title="Queued role", company="Feed company", location="Preview city", source="other",
@@ -443,29 +579,59 @@ async def test_auto_apply_run_job_details_persist_and_are_private(client, user, 
     assert detail["jobs"][0]["location"] == "Remote" and detail["jobs"][0]["source"] == "linkedin"
     assert detail["jobs"][1]["external_link"] == "https://example.test/queued"
     apps = (await client.get(f"{API}/applications")).json()
+    by_id = {application["id"]: application for application in apps}
+    for snapshot in detail["jobs"]:
+        application = by_id[snapshot["application_id"]]
+        assert snapshot["applied_at"] == application["applied_at"]
+        assert snapshot["application"]["id"] == application["id"]
+        assert snapshot["application"]["status"] == application["status"]
+    assert detail["jobs"][0]["job_details"] == {
+        "description": "Build Python services.", "salary_min_lpa": 12, "salary_max_lpa": 20,
+        "job_type": "full_time", "is_remote": True, "experience_min": 2, "experience_max": 5,
+        "skills": ["Python", "FastAPI"], "posted_date": "2026-01-01T09:00:00+00:00",
+    }
+    assert detail["jobs"][1]["job_details"]["salary_min_lpa"] is None
+
+    def saved_jobs(payload):
+        return [{key: value for key, value in job.items() if key != "application"} for job in payload["jobs"]]
+
     for application in apps:
-        await client.patch(f"{API}/applications/{application['id']}", json={"status": "offer"})
+        await client.patch(f"{API}/applications/{application['id']}", json={
+            "status": "offer", "notes": "Offer accepted for review.", "offer_salary_lpa": 25,
+            "interview_date": "2030-01-02T09:00:00Z",
+        })
     async with async_session_factory() as db:
         recorded = await db.get(Job, job_id)
         recorded.title = "Renamed after the run"
+        recorded.salary_min_lpa = 999
+        recorded.description = "Changed after the run."
         await db.commit()
-    assert (await client.get(endpoint)).json() == detail
+    updated = (await client.get(endpoint)).json()
+    assert saved_jobs(updated) == saved_jobs(detail)
+    for snapshot in updated["jobs"]:
+        assert snapshot["application"]["status"] == "offer"
+        assert snapshot["application"]["notes"] == "Offer accepted for review."
+        assert snapshot["application"]["offer_salary_lpa"] == 25
+        assert snapshot["application"]["interview_date"] == "2030-01-02T09:00:00Z"
     for application in apps:
         await client.delete(f"{API}/applications/{application['id']}")
     await client.delete(f"{API}/connections/linkedin")
     # Removing tracker entries and links must not erase the run's saved evidence.
-    assert (await client.get(endpoint)).json() == detail
+    deleted = (await client.get(endpoint)).json()
+    assert saved_jobs(deleted) == saved_jobs(detail)
+    assert all(snapshot["application"] is None for snapshot in deleted["jobs"])
     async with async_session_factory() as db:
         recorded = await db.get(Job, job_id)
         await db.delete(recorded)
         await db.commit()
-    assert (await client.get(endpoint)).json() == detail
+    assert (await client.get(endpoint)).json() == deleted
 
     await client.put(f"{API}/connections/linkedin", json={"handle": "preview"})
     second = (await client.post(f"{API}/auto-apply/run")).json()
     second_detail = (await client.get(f"{API}/auto-apply/runs/{second['id']}")).json()
     assert second["id"] != first["id"] and [job["title"] for job in second_detail["jobs"]] == ["Queued role"]
-    assert (await client.get(endpoint)).json() == detail
+    assert second_detail["jobs"][0]["application"]["id"] == second_detail["jobs"][0]["application_id"]
+    assert (await client.get(endpoint)).json() == deleted
     assert (await client.get(f"{API}/auto-apply/runs/999999")).status_code == 404
 
     await register(client, "other-run@gmail.com", "Other")
