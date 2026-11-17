@@ -86,6 +86,10 @@ enabled and the backend is awake; the free Render blueprint disables that schedu
   without caching old dashboard HTML.
 - Navigation, settings, forms and admin views adapt to narrow screens; settings and dialogs scroll
   separately, and the installed app uses the device's safe area and dynamic viewport height.
+- Below desktop width, a persistent bottom bar provides Home, Jobs, Tracker, Auto-apply and More.
+  More opens the existing navigation drawer for Connections, Plans and admin access. The bar sits
+  outside the scrolling content, respects the bottom safe area and never covers page actions.
+  Phone workspaces use gold-accented editorial headers, layered cards and larger touch controls.
 - Connectivity recovery dismisses the offline banner in place, without reloading or navigating.
   The current page, signup step and entered values remain intact. Connectivity probes pause while
   the app is hidden and check again on return, including after opening an authenticator app.

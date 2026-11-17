@@ -46,13 +46,15 @@ export const DEVELOPER_LINKS = [
 ]
 
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/jobs', label: 'Find jobs', icon: Search },
-  { to: '/applications', label: 'Applications', icon: Briefcase },
-  { to: '/auto-apply', label: 'Auto-apply', icon: Bot },
+  { to: '/dashboard', label: 'Dashboard', mobileLabel: 'Home', icon: LayoutDashboard },
+  { to: '/jobs', label: 'Find jobs', mobileLabel: 'Jobs', icon: Search },
+  { to: '/applications', label: 'Applications', mobileLabel: 'Tracker', icon: Briefcase },
+  { to: '/auto-apply', label: 'Auto-apply', mobileLabel: 'Auto-apply', icon: Bot },
   { to: '/connections', label: 'Connections', icon: Link2 },
   { to: '/billing', label: 'Plans', icon: Crown },
 ]
+
+const MOBILE_NAV = NAV.slice(0, 4)
 
 export function ProtectedRoute() {
   const { user, initialized } = useAuthStore()
@@ -105,6 +107,7 @@ export function AppLayout() {
   const [hover, setHover] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const drawer = useRef<HTMLDivElement>(null)
+  const mainContent = useRef<HTMLElement>(null)
   const { openSettings } = useSettingsStore()
   useShortcuts()
   const loc = useLocation()
@@ -238,9 +241,21 @@ export function AppLayout() {
               <button onClick={() => openSettings('security')} className="shrink-0 rounded-md bg-amber-500/20 px-3 py-1 text-xs font-semibold hover:bg-amber-500/30">Verify now</button>
             </div>
           )}
-          <main data-guide="workspace" className="workspace-main min-h-0 flex-1 overflow-y-auto">
+          <main ref={mainContent} data-guide="workspace" className="workspace-main min-h-0 flex-1 overflow-y-auto">
             <div className="workspace-page min-w-0"><div key={loc.pathname} className="workspace-content"><Outlet /></div></div>
           </main>
+          <nav className="workspace-mobile-tabs" aria-label="Mobile workspace navigation">
+            {MOBILE_NAV.map(({ to, label, mobileLabel, icon: Icon }) => (
+              <NavLink key={to} to={to} aria-label={label} onClick={() => { setOpen(false); mainContent.current?.scrollTo({ top: 0, behavior: 'instant' }) }} className="workspace-mobile-tab">
+                <span className="workspace-mobile-tab-icon"><Icon size={20} aria-hidden="true" /></span>
+                <span>{mobileLabel}</span>
+              </NavLink>
+            ))}
+            <button type="button" className="workspace-mobile-tab" aria-label="More navigation" aria-expanded={open} aria-controls="workspace-mobile-nav" data-active={open || !MOBILE_NAV.some(({ to }) => loc.pathname.startsWith(to))} onClick={() => setOpen((value) => !value)}>
+              <span className="workspace-mobile-tab-icon"><Menu size={20} aria-hidden="true" /></span>
+              <span>More</span>
+            </button>
+          </nav>
         </div>
       </div>
       <SettingsModal />

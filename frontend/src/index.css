@@ -105,6 +105,7 @@
 .workspace-nav-link[aria-current="page"] { border-color: rgb(var(--brand-400) / .2); background: linear-gradient(110deg, rgb(var(--brand-400) / .15), rgb(var(--brand-400) / .035)); color: rgb(var(--brand-300)); }
 .workspace-nav-link[aria-current="page"]::before { position: absolute; top: 25%; bottom: 25%; left: -1px; width: 2px; border-radius: 3px; background: rgb(var(--brand-300)); content: ''; }
 .workspace-topbar { background: rgb(16 23 27 / .9); backdrop-filter: blur(20px); }
+.workspace-mobile-tabs { display: none; }
 .workspace-header-kicker { margin-bottom: 2px; color: rgb(var(--brand-400)); font-size: 8px; font-weight: 600; letter-spacing: .2em; }
 .workspace-main { background: radial-gradient(ellipse at 90% 0, rgb(var(--brand-300) / .045), transparent 50%), #080c10; }
 .workspace-page { width: 100%; min-height: 100%; padding: 24px; }
@@ -156,7 +157,15 @@
   .btn-primary:not(:disabled):hover { box-shadow: 0 8px 28px -12px rgb(var(--brand-400) / .35); }
 }
 @media (max-width: 639px) {
-  .workspace-page { padding: 20px 12px; }
+  .workspace-page { padding: 20px 16px 28px; }
+  .workspace-main { background: radial-gradient(ellipse at 100% 0, rgb(var(--brand-300) / .09), transparent 55%), #080c10; }
+  .workspace-topbar { border-bottom-color: rgb(var(--brand-400) / .22); background: linear-gradient(110deg, rgb(var(--brand-300) / .055), transparent 70%), #0d1418; }
+  .workspace-topbar > div > p:last-child { font-family: Georgia, 'Times New Roman', serif; font-size: 18px; }
+  .workspace-content .card { border-radius: 20px; border-color: rgb(var(--brand-300) / .17); background-image: linear-gradient(135deg, rgb(var(--brand-300) / .065), transparent 65%); box-shadow: 0 14px 32px -22px #000d, inset 0 1px 0 rgb(var(--brand-300) / .07); }
+  .workspace-content .page-header { border: 1px solid rgb(var(--brand-400) / .22); border-radius: 20px; padding: 20px 16px; background: radial-gradient(ellipse at top left, rgb(var(--brand-300) / .08), transparent 85%), #10171b; }
+  .workspace-content .page-header::after { left: 20px; width: 56px; }
+  .workspace-content .filter-bar { border-color: rgb(var(--brand-400) / .22); border-radius: 16px; }
+  .workspace-content :is(.filter-clear, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger) { min-height: 44px; }
   .workspace-header-kicker { display: none; }
   .page-header { gap: 18px; padding-bottom: 20px; }
   .page-title { font-size: 30px; }
@@ -169,6 +178,15 @@
   .account-nav-links { gap: 12px; font-size: 11px; }
   .account-nav-links > a:last-child { padding: 8px 10px; }
   .auth-card > h1, .onboarding-page h1 { font-size: 30px; }
+}
+@media (max-width: 1023px) {
+  .app-shell { padding-bottom: 0; }
+  .workspace-main { scroll-padding-bottom: 24px; }
+  .workspace-mobile-tabs { position: relative; z-index: 20; display: grid; flex-shrink: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; border-top: 1px solid rgb(var(--brand-400) / .3); padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, #162020, #0d1418); box-shadow: 0 -12px 35px -18px #000; }
+  .workspace-mobile-tab { display: flex; min-width: 0; min-height: 52px; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px solid transparent; border-radius: 13px; padding: 5px 2px; color: #a2ada8; font-size: 10px; font-weight: 500; line-height: 1.2; text-decoration: none; transition: background .2s, color .2s, border-color .2s; }
+  .workspace-mobile-tab-icon { display: grid; min-height: 23px; place-items: center; }
+  .workspace-mobile-tab[aria-current="page"], .workspace-mobile-tab[data-active="true"] { border-color: rgb(var(--brand-400) / .3); background: linear-gradient(135deg, rgb(var(--brand-300) / .16), rgb(var(--brand-400) / .04)); color: rgb(var(--brand-200)); box-shadow: inset 0 1px 0 rgb(var(--brand-300) / .12); }
+  .workspace-mobile-tab:active { background-color: rgb(var(--brand-300) / .12); }
 }
 /* Installation guidance is shared by the public banner and the workspace dialog. */
 .install-privacy { flex-basis: 100%; min-width: 0; border-top: 1px solid rgb(230 201 151 / 20%); padding-top: 14px; color: #b6bdc3; font-size: 12px; line-height: 1.8; }
