@@ -13,6 +13,20 @@ export const apiClient = axios.create({
 
 let refreshRequest: Promise<AuthResponse> | null = null
 
+function isAuthResponse(value: unknown): value is AuthResponse {
+  if (!value || typeof value !== 'object' || !('user' in value) ||
+    !('expires_at' in value) || !('refresh_expires_at' in value) || !('server_time' in value)) return false
+  const user = value.user
+  return !!user && typeof user === 'object' &&
+    'id' in user && typeof user.id === 'number' && Number.isInteger(user.id) &&
+    'email' in user && typeof user.email === 'string' &&
+    'role' in user && typeof user.role === 'string' &&
+    'plan' in user && typeof user.plan === 'string' &&
+    typeof value.expires_at === 'number' && Number.isFinite(value.expires_at) &&
+    typeof value.server_time === 'number' && Number.isFinite(value.server_time) &&
+    (value.refresh_expires_at === null || (typeof value.refresh_expires_at === 'number' && Number.isFinite(value.refresh_expires_at)))
+}
+
 export function refreshSession(): Promise<AuthResponse> {
   if (!refreshRequest) {
     refreshRequest = apiClient.post<AuthResponse>('/auth/refresh')
@@ -34,7 +48,10 @@ const NO_REFRESH = ['/auth/login', '/auth/signup', '/auth/activate', '/auth/refr
 apiClient.interceptors.response.use(
   (res) => {
     if (['/auth/login', '/auth/refresh', '/auth/session', '/auth/passkeys/login/verify'].includes(res.config.url ?? '')) {
-      useSessionStore.getState().update(res.data as AuthResponse)
+      if (!isAuthResponse(res.data)) {
+        throw new AxiosError('The sign-in server returned an invalid session response.', AxiosError.ERR_BAD_RESPONSE, res.config, res.request, res)
+      }
+      useSessionStore.getState().update(res.data)
     }
     if (['post', 'put', 'patch', 'delete'].includes(res.config.method ?? '') && !res.config.url?.startsWith('/auth/')) {
       notifyDataChanged()

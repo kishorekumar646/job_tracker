@@ -6,7 +6,8 @@ FastAPI application factory for the Job Tracker API.
 import asyncio
 import logging
 from pathlib import Path
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,6 +31,7 @@ _COLUMN_UPGRADES = [
     ("jobs", "is_remote", False),
     ("applications", "match_score", None),
     ("applications", "auto_applied", False),
+    ("auto_apply_runs", "details_recorded", False),
     ("users", "is_active", True),
     ("users", "avatar", None),
     ("users", "guide_views", 0),
@@ -76,27 +78,44 @@ async def init_db() -> None:
         await seed_sample_jobs(db)
 
 
-async def _scheduler(interval_minutes: int) -> None:
-    while True:
-        await asyncio.sleep(interval_minutes * 60)
-        try:
-            applied = await sweep_all_users()
-            logger.info("scheduled auto-apply sweep finished, %s applications", applied)
-        except Exception:
-            logger.exception("scheduled auto-apply sweep failed")
+async def _scheduler(app: FastAPI, interval_minutes: int) -> None:
+    try:
+        while True:
+            app.state.auto_apply_next_check_at = datetime.now(timezone.utc) + timedelta(minutes=interval_minutes)
+            await asyncio.sleep(interval_minutes * 60)
+            app.state.auto_apply_next_check_at = None
+            app.state.auto_apply_sweep_running = True
+            try:
+                applied = await sweep_all_users()
+                logger.info("scheduled auto-apply sweep finished, %s applications", applied)
+            except Exception:
+                logger.exception("scheduled auto-apply sweep failed")
+            finally:
+                app.state.auto_apply_sweep_running = False
+    finally:
+        app.state.auto_apply_next_check_at = None
+        app.state.auto_apply_sweep_running = False
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(app: FastAPI):
     await init_db()
+    app.state.auto_apply_next_check_at = None
+    app.state.auto_apply_sweep_running = False
     task = None
     if settings.AUTO_APPLY_INTERVAL_MINUTES > 0:
-        task = asyncio.create_task(_scheduler(settings.AUTO_APPLY_INTERVAL_MINUTES))
+        task = asyncio.create_task(_scheduler(app, settings.AUTO_APPLY_INTERVAL_MINUTES))
     mail_task = asyncio.create_task(poll_forever()) if settings.IMAP_HOST else None
-    yield
-    for t in (task, mail_task):
-        if t:
-            t.cancel()
+    try:
+        yield
+    finally:
+        for t in (task, mail_task):
+            if t:
+                t.cancel()
+        for t in (task, mail_task):
+            if t:
+                with suppress(asyncio.CancelledError):
+                    await t
 
 
 app = FastAPI(title="Job Tracker API", version="2.0.0", docs_url="/docs", lifespan=lifespan)

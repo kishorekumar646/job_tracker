@@ -350,6 +350,24 @@ class AutoApplyRunOut(BaseModel):
     applied: int
     skipped: int
     message: Optional[str] = None
+    details_recorded: bool = False
+
+
+class AutoApplyRunJobOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    company: str
+    location: Optional[str] = None
+    source: str
+    external_link: str
+    match_score: int
+    outcome: Literal["applied", "to_apply"]
+
+
+class AutoApplyRunDetail(AutoApplyRunOut):
+    model_config = ConfigDict(from_attributes=True)
+    jobs: list[AutoApplyRunJobOut] = Field(default_factory=list)
 
 
 class AutoApplyStatus(BaseModel):
@@ -361,6 +379,9 @@ class AutoApplyStatus(BaseModel):
     daily_limit: int
     lifetime_used: int = 0
     lifetime_limit: Optional[int] = None
+    schedule_interval_minutes: int
+    next_scheduled_at: Optional[UTCDateTime] = None
+    scheduled_sweep_running: bool = False
     last_run: Optional[AutoApplyRunOut] = None
 
 

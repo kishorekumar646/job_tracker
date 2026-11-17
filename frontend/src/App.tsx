@@ -45,7 +45,24 @@ function SessionWatcher() {
 
 export default function App() {
   const init = useAuthStore((s) => s.init)
+  const initialized = useAuthStore((s) => s.initialized)
   useEffect(() => { void init() }, [init])
+  useEffect(() => {
+    if (initialized) return
+    const retry = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) void init()
+    }
+    const timer = setInterval(retry, 15_000)
+    window.addEventListener('online', retry)
+    window.addEventListener('focus', retry)
+    document.addEventListener('visibilitychange', retry)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('online', retry)
+      window.removeEventListener('focus', retry)
+      document.removeEventListener('visibilitychange', retry)
+    }
+  }, [initialized, init])
 
   return (
     <BrowserRouter>

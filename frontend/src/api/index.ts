@@ -10,6 +10,7 @@ import type {
   ApplicationStatus,
   AuthResponse,
   AutoApplyRun,
+  AutoApplyRunDetail,
   AutoApplyStatus,
   Connection,
   DashboardStats,
@@ -115,6 +116,7 @@ export const autoApplyApi = {
   status: () => apiClient.get<AutoApplyStatus>('/auto-apply/status').then((r) => r.data),
   run: () => apiClient.post<AutoApplyRun>('/auto-apply/run').then((r) => r.data),
   runs: () => apiClient.get<AutoApplyRun[]>('/auto-apply/runs').then((r) => r.data),
+  runDetails: (id: number) => apiClient.get<AutoApplyRunDetail>(`/auto-apply/runs/${id}`).then((r) => r.data),
 }
 
 export interface AdminUser {

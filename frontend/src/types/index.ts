@@ -149,6 +149,20 @@ export interface AutoApplyRun {
   applied: number
   skipped: number
   message: string | null
+  details_recorded: boolean
+}
+
+export interface AutoApplyRunDetail extends AutoApplyRun {
+  jobs: {
+    id: number
+    title: string
+    company: string
+    location: string | null
+    source: JobSource
+    external_link: string
+    match_score: number
+    outcome: 'applied' | 'to_apply'
+  }[]
 }
 
 export interface AutoApplyStatus {
@@ -160,6 +174,9 @@ export interface AutoApplyStatus {
   daily_limit: number
   lifetime_used: number
   lifetime_limit: number | null
+  schedule_interval_minutes: number
+  next_scheduled_at: string | null
+  scheduled_sweep_running: boolean
   last_run: AutoApplyRun | null
 }
 

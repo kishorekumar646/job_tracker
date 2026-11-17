@@ -25,36 +25,105 @@ function ChartShimmer() {
   )
 }
 
-export function PageLoader({ variant = 'list' }: { variant?: 'list' | 'dashboard' | 'cards' | 'form' | 'table' | 'chart' }) {
+function ApplicationRowsShimmer() {
   return (
-    <div role="status" aria-label="Loading content" className="w-full min-w-0">
+    <div className="divide-y divide-gray-800">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-4 py-4">
+          <Shimmer className="h-10 w-10 shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1 basis-36 space-y-2"><Shimmer className="h-4 w-3/4" /><Shimmer className="h-3 w-1/2" /></div>
+          <Shimmer className="h-6 w-24 rounded-full" /><Shimmer className="h-8 w-8" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export type PageLoaderVariant = 'list' | 'dashboard' | 'jobs' | 'applications' | 'auto-apply' | 'billing' | 'cards' | 'form' | 'table' | 'chart'
+
+export function PageLoader({ variant = 'list', page = false }: { variant?: PageLoaderVariant; page?: boolean }) {
+  return (
+    <div role="status" aria-label="Loading content" aria-busy="true" className="w-full min-w-0" data-skeleton={variant}>
       <span className="sr-only">Loading content...</span>
-      <div aria-hidden="true" className="space-y-4">
+      <div aria-hidden="true" className="space-y-6">
+        {page && (
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-800 pb-6">
+            <div className="min-w-0 flex-1 space-y-3"><Shimmer className="h-2 w-28 max-w-full" /><Shimmer className="h-9 w-56 max-w-full" /><Shimmer className="h-4 w-96 max-w-full" /></div>
+            <Shimmer className="h-11 w-28 shrink-0 rounded-xl" />
+          </div>
+        )}
         {variant === 'dashboard' && (
           <>
-            <Shimmer className="h-7 w-64 max-w-full" />
-            <Shimmer className="h-4 w-80 max-w-full" />
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="card space-y-3 p-5"><Shimmer className="h-10 w-10" /><Shimmer className="h-7 w-16" /><Shimmer className="h-4 w-24 max-w-full" /></div>
+                <div key={i} className="card space-y-4 p-5"><Shimmer className="h-10 w-10 rounded-xl" /><Shimmer className="h-9 w-16 max-w-full" /><Shimmer className="h-3 w-24 max-w-full" /></div>
               ))}
             </div>
             <div className="card card-pad"><ChartShimmer /></div>
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="card card-pad lg:col-span-2"><Shimmer className="mb-4 h-5 w-44 max-w-full" /><ApplicationRowsShimmer /></div>
+              <div className="space-y-6">
+                <div className="card card-pad space-y-4">
+                  <div className="flex items-center gap-4"><Shimmer className="h-16 w-16 shrink-0 rounded-full" /><Shimmer className="h-4 w-28 max-w-full" /></div>
+                  {Array.from({ length: 3 }, (_, i) => <Shimmer key={i} className="h-4 w-full" />)}
+                </div>
+                <div className="card card-pad space-y-4"><Shimmer className="h-5 w-28 max-w-full" /><Shimmer className="h-3 w-full" /><Shimmer className="h-3 w-4/5" /><Shimmer className="h-3 w-3/5" /></div>
+              </div>
+            </div>
           </>
         )}
         {variant === 'chart' && <ChartShimmer />}
-        {variant === 'list' && Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="card flex gap-4 p-4 sm:p-5">
-            <Shimmer className="h-12 w-12 shrink-0" />
-            <div className="min-w-0 flex-1 space-y-3">
-              <Shimmer className="h-4 w-3/5" /><Shimmer className="h-3 w-4/5" /><Shimmer className="h-3 w-2/5" />
-            </div>
-            <Shimmer className="hidden h-9 w-20 shrink-0 sm:block" />
+        {variant === 'jobs' && (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="card flex flex-col gap-4 p-5 sm:flex-row">
+                <Shimmer className="h-12 w-12 shrink-0 rounded-xl" />
+                <div className="min-w-0 flex-1 space-y-4">
+                  <Shimmer className="h-5 w-3/5" /><Shimmer className="h-3 w-4/5" />
+                  <div className="flex flex-wrap gap-2">{Array.from({ length: 4 }, (_, j) => <Shimmer key={j} className="h-6 w-16 rounded-full" />)}</div>
+                </div>
+                <div className="flex shrink-0 gap-2 sm:flex-col"><Shimmer className="h-10 w-24 rounded-xl" /><Shimmer className="h-8 w-10 rounded-lg" /></div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+        {(variant === 'list' || variant === 'applications') && <div className="card px-4 sm:px-5"><ApplicationRowsShimmer /></div>}
+        {variant === 'auto-apply' && (
+          <>
+            <div className="card card-pad space-y-5">
+              <div className="flex items-center gap-3"><Shimmer className="h-11 w-11 shrink-0 rounded-xl" /><Shimmer className="h-5 w-48 max-w-full flex-1" /><Shimmer className="h-7 w-12 shrink-0 rounded-full" /></div>
+              <div className="flex flex-wrap gap-3"><Shimmer className="h-6 w-28 rounded-full" /><Shimmer className="h-6 w-32" /></div>
+              <Shimmer className="h-4 w-2/3" /><Shimmer className="h-3 w-full" />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="card card-pad space-y-6 lg:col-span-2">
+                <Shimmer className="h-5 w-32 max-w-full" />
+                {Array.from({ length: 2 }, (_, i) => <div key={i} className="space-y-3"><Shimmer className="h-4 w-36 max-w-full" /><Shimmer className="h-2 w-full rounded-full" /></div>)}
+              </div>
+              <div className="card card-pad space-y-4"><Shimmer className="h-5 w-24 max-w-full" /><Shimmer className="h-9 w-28 max-w-full" /><Shimmer className="h-2 w-full rounded-full" /><Shimmer className="h-4 w-32 max-w-full" /><Shimmer className="h-9 w-9 rounded-lg" /></div>
+            </div>
+            <div className="card card-pad"><Shimmer className="mb-4 h-5 w-32 max-w-full" /><ApplicationRowsShimmer /></div>
+          </>
+        )}
+        {variant === 'billing' && (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              {Array.from({ length: 2 }, (_, i) => (
+                <div key={i} className="card space-y-5 p-5 sm:p-7">
+                  <div className="flex justify-between gap-3"><Shimmer className="h-6 w-20" /><Shimmer className="h-6 w-24 rounded-full" /></div>
+                  <Shimmer className="h-8 w-36 max-w-full" />
+                  {Array.from({ length: 4 }, (_, j) => <div key={j} className="flex gap-2"><Shimmer className="h-4 w-4 shrink-0 rounded-full" /><Shimmer className="h-4 w-3/4" /></div>)}
+                  <Shimmer className="h-11 w-full rounded-xl" />
+                </div>
+              ))}
+            </div>
+            <div className="card p-5"><Shimmer className="h-4 w-3/4" /></div>
+            <div className="card card-pad"><Shimmer className="mb-4 h-5 w-24" /><ApplicationRowsShimmer /></div>
+          </>
+        )}
         {variant === 'cards' && (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }, (_, i) => (
+            {Array.from({ length: 6 }, (_, i) => (
               <div key={i} className="card space-y-4 p-5">
                 <Shimmer className="h-12 w-12" /><Shimmer className="h-5 w-3/5" /><Shimmer className="h-3 w-full" /><Shimmer className="h-3 w-4/5" /><Shimmer className="h-10 w-full" />
               </div>
@@ -75,8 +144,12 @@ export function PageLoader({ variant = 'list' }: { variant?: 'list' | 'dashboard
         {variant === 'table' && (
           <div className="card divide-y divide-gray-800">
             {Array.from({ length: 6 }, (_, row) => (
-              <div key={row} className="grid grid-cols-3 gap-4 p-4">
-                {Array.from({ length: 3 }, (_, col) => <Shimmer key={col} className={`${row === 0 ? 'h-3' : 'h-5'} ${col === 2 ? 'w-2/3' : 'w-full'}`} />)}
+              <div key={row} className="grid grid-cols-2 items-center gap-4 p-4 sm:grid-cols-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  {row > 0 && <Shimmer className="h-9 w-9 shrink-0 rounded-full" />}
+                  <div className="min-w-0 flex-1 space-y-2"><Shimmer className={`${row === 0 ? 'h-3' : 'h-4'} w-full`} />{row > 0 && <Shimmer className="h-3 w-3/4" />}</div>
+                </div>
+                <Shimmer className="hidden h-5 w-2/3 rounded-full sm:block" /><Shimmer className="hidden h-3 w-3/4 sm:block" /><Shimmer className="ml-auto h-7 w-20 max-w-full rounded-lg" />
               </div>
             ))}
           </div>

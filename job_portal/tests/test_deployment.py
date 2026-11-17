@@ -12,7 +12,7 @@ from sqlalchemy import select, text
 
 from app.database import async_engine, async_session_factory, database_url, settings
 from app.main import upgrade_columns
-from app.models import UserProfile
+from app.models import AutoApplyRun, UserProfile
 from app.services import email_verification as ev
 from app.services.frontend import FrontendFiles
 from helpers import register
@@ -27,12 +27,101 @@ def test_postgres_connection_url(prefix):
     assert local.query["sslmode"] == "disable"
 
 
+async def test_disabled_scheduler_does_not_start(monkeypatch):
+    from unittest.mock import AsyncMock
+    from app import main
+
+    scheduler = AsyncMock()
+    monkeypatch.setattr(main, "init_db", AsyncMock())
+    monkeypatch.setattr(main, "_scheduler", scheduler)
+    monkeypatch.setattr(settings, "AUTO_APPLY_INTERVAL_MINUTES", 0)
+    monkeypatch.setattr(settings, "IMAP_HOST", "")
+    instance = FastAPI()
+    async with main.lifespan(instance):
+        scheduler.assert_not_called()
+        assert instance.state.auto_apply_next_check_at is None
+        assert instance.state.auto_apply_sweep_running is False
+
+
+@pytest.mark.parametrize("fail_first", [False, True])
+async def test_scheduler_reports_real_check_timing(client, user, monkeypatch, caplog, fail_first):
+    import asyncio
+    from contextlib import suppress
+    from datetime import datetime, timedelta, timezone
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from app import main
+
+    started = datetime(2030, 1, 1, 12, tzinfo=timezone.utc)
+    finished = started + timedelta(minutes=7)
+    clock = Mock()
+    clock.now.side_effect = [started, finished]
+    monkeypatch.setattr(main, "datetime", clock)
+    monkeypatch.setattr(settings, "AUTO_APPLY_INTERVAL_MINUTES", 5)
+    monkeypatch.setattr(main.app.state, "auto_apply_next_check_at", None, raising=False)
+    monkeypatch.setattr(main.app.state, "auto_apply_sweep_running", False, raising=False)
+    sleep_calls = asyncio.Queue()
+    release_sleep = asyncio.Event()
+    second_sweep = asyncio.Event()
+    sweeps = []
+
+    async def sleep(seconds):
+        sleep_calls.put_nowait(seconds)
+        await release_sleep.wait()
+        release_sleep.clear()
+
+    async def sweep():
+        sweeps.append((main.app.state.auto_apply_next_check_at, main.app.state.auto_apply_sweep_running))
+        if len(sweeps) == 1:
+            if fail_first:
+                raise RuntimeError("test scheduled sweep failure")
+            return 3
+        second_sweep.set()
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(main, "asyncio", SimpleNamespace(sleep=sleep))
+    monkeypatch.setattr(main, "sweep_all_users", sweep)
+    task = asyncio.create_task(main._scheduler(main.app, 5))
+    try:
+        assert await asyncio.wait_for(sleep_calls.get(), 2) == 300
+        state = (await client.get("/api/v1/auto-apply/status")).json()
+        assert state["schedule_interval_minutes"] == 5
+        assert state["next_scheduled_at"] == (started + timedelta(minutes=5)).isoformat()
+        assert state["scheduled_sweep_running"] is False and state["enabled"] is False
+
+        release_sleep.set()
+        assert await asyncio.wait_for(sleep_calls.get(), 2) == 300
+        assert sweeps == [(None, True)]
+        state = (await client.get("/api/v1/auto-apply/status")).json()
+        assert state["next_scheduled_at"] == (finished + timedelta(minutes=5)).isoformat()
+        assert state["scheduled_sweep_running"] is False
+        if fail_first:
+            assert "scheduled auto-apply sweep failed" in caplog.text
+
+        release_sleep.set()
+        await asyncio.wait_for(second_sweep.wait(), 2)
+        state = (await client.get("/api/v1/auto-apply/status")).json()
+        assert state["next_scheduled_at"] is None and state["scheduled_sweep_running"] is True
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+    state = (await client.get("/api/v1/auto-apply/status")).json()
+    assert state["next_scheduled_at"] is None and state["scheduled_sweep_running"] is False
+
+
 async def test_schema_upgrade_handles_existing_rows(client, user):
+    async with async_session_factory() as db:
+        legacy = AutoApplyRun(user_id=user["id"], applied=2)
+        db.add(legacy)
+        await db.commit()
+        run_id = legacy.id
     async with async_engine.begin() as conn:
         await conn.execute(text("ALTER TABLE users DROP COLUMN email_verified"))
         await conn.execute(text("ALTER TABLE users DROP COLUMN avatar"))
         await conn.execute(text("ALTER TABLE users DROP COLUMN guide_views"))
         await conn.execute(text("ALTER TABLE users DROP COLUMN pro_welcome_pending"))
+        await conn.execute(text("ALTER TABLE auto_apply_runs DROP COLUMN details_recorded"))
         await conn.execute(text("ALTER TABLE user_profiles DROP COLUMN resume_data"))
         await conn.run_sync(upgrade_columns)
         await conn.run_sync(upgrade_columns)
@@ -40,7 +129,10 @@ async def test_schema_upgrade_handles_existing_rows(client, user):
         assert await conn.scalar(text("SELECT avatar FROM users LIMIT 1")) is None
         assert await conn.scalar(text("SELECT guide_views FROM users LIMIT 1")) == 0
         assert not await conn.scalar(text("SELECT pro_welcome_pending FROM users LIMIT 1"))
+        assert not await conn.scalar(text("SELECT details_recorded FROM auto_apply_runs LIMIT 1"))
         assert await conn.scalar(text("SELECT resume_data FROM user_profiles LIMIT 1")) is None
+    legacy = (await client.get(f"/api/v1/auto-apply/runs/{run_id}")).json()
+    assert legacy["applied"] == 2 and legacy["details_recorded"] is False and legacy["jobs"] == []
 
 
 async def test_resume_survives_without_upload_directory(client, user, tmp_path, monkeypatch):

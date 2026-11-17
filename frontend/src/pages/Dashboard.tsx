@@ -43,7 +43,7 @@ export default function Dashboard() {
       .catch((e) => { if (active) toast.error(errorMessage(e)) })
     return () => { active = false }
   }, [refreshKey, range, revision])
-  if (!stats) return <PageLoader variant="dashboard" />
+  if (!stats) return <PageLoader variant="dashboard" page />
 
   const todo = [
     { done: stats.profile_completeness >= 60, label: 'Complete your profile & upload a resume', to: '/connections', settings: 'profile' as const },

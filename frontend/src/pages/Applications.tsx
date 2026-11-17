@@ -50,7 +50,7 @@ export default function Applications() {
         <FilterChips label="Source" value={source} onChange={setSource} wide options={[{ value: '', label: 'All sources' }, ...['linkedin', 'naukri', 'indeed', 'glassdoor', 'foundit', 'instahyre', 'manual'].map((p) => ({ value: p, label: p[0].toUpperCase() + p.slice(1) }))]} />
       </FilterBar>
 
-      {!items ? <PageLoader /> : items.length === 0 ? (
+      {!items ? <PageLoader variant="applications" /> : items.length === 0 ? (
         <div className="card"><EmptyState icon={<Briefcase className="h-6 w-6" />} title="No applications found" text="Apply to jobs or let auto-apply do it for you." action={<Link to="/jobs" className="btn-primary">Find jobs</Link>} /></div>
       ) : (
         <div className="card divide-y divide-gray-800 overflow-hidden">

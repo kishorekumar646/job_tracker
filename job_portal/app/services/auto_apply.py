@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..database import async_session_factory
-from ..models import Application, AutoApplyRun, Job, JobPreference, SocialAccount, User, UserProfile
+from ..models import Application, AutoApplyRun, AutoApplyRunJob, Job, JobPreference, SocialAccount, User, UserProfile
 from .job_feed import FEED_PREFIXES, sync_for_preferences
 from .matching import score_job
 from .plans import daily_apply_cap, lifetime_apply_cap
@@ -61,7 +61,7 @@ async def readiness_blockers(db: AsyncSession, user_id: int) -> tuple[list[str],
 
 async def run_auto_apply(db: AsyncSession, user: User, trigger: str = "manual") -> AutoApplyRun:
     """Apply to the best-matching new jobs, honouring daily limit and min score."""
-    run = AutoApplyRun(user_id=user.id, trigger=trigger)
+    run = AutoApplyRun(user_id=user.id, trigger=trigger, jobs=[])
     db.add(run)
 
     blockers, platforms = await readiness_blockers(db, user.id)
@@ -120,7 +120,8 @@ async def run_auto_apply(db: AsyncSession, user: User, trigger: str = "manual") 
 
     ranked.sort(key=lambda r: r[0], reverse=True)
     for score, job in ranked[:remaining]:
-        if (job.external_id or "").startswith(FEED_PREFIXES):
+        queued = (job.external_id or "").startswith(FEED_PREFIXES)
+        if queued:
             # Real postings can't be submitted on the user's behalf: queue them to finish on the employer's page.
             db.add(Application(
                 user_id=user.id, job_id=job.id, match_score=score, auto_applied=True, status="to_apply",
@@ -131,6 +132,11 @@ async def run_auto_apply(db: AsyncSession, user: User, trigger: str = "manual") 
                 user_id=user.id, job_id=job.id, match_score=score, auto_applied=True,
                 notes=f"Auto-applied via {job.source.title()} (match {score}%)",
             ))
+        run.jobs.append(AutoApplyRunJob(
+            title=job.title, company=job.company, location=job.location,
+            source=job.source, external_link=job.job_url, match_score=score,
+            outcome="to_apply" if queued else "applied",
+        ))
         run.applied += 1
     run.skipped += max(0, len(ranked) - remaining)
 

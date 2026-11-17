@@ -4,7 +4,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react
 import { BookOpen, Briefcase, Bot, Github, Globe, Linkedin, LayoutDashboard, Link2, LogOut, Crown, Menu, MessageSquareHeart, Rocket, Settings, ShieldCheck, Search, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import Admin from '../../pages/Admin'
-import { PageLoader } from '../ui'
+import { PageLoader, type PageLoaderVariant } from '../ui'
 import { useSettingsStore } from '../../store/settingsStore'
 import { SettingsModal } from './SettingsModal'
 import { NotificationBell } from './NotificationBell'
@@ -57,10 +57,37 @@ const NAV = [
 
 const MOBILE_NAV = NAV.slice(0, 4)
 
+const PAGE_LOADERS: Record<string, PageLoaderVariant> = {
+  '/dashboard': 'dashboard', '/jobs': 'jobs', '/applications': 'applications',
+  '/auto-apply': 'auto-apply', '/billing': 'billing', '/connections': 'cards',
+  '/admin': 'table', '/guide': 'cards',
+}
+
+function SessionRestore() {
+  const { init, initBusy, initError } = useAuthStore()
+  const { pathname, search } = useLocation()
+  const variant = pathname === '/admin' && new URLSearchParams(search).get('tab') === 'announce' ? 'form' : PAGE_LOADERS[pathname] ?? 'form'
+  if (!initError) return (
+    <div className={pathname === '/login' || pathname === '/signup' ? 'mx-auto w-full max-w-lg px-4 py-10' : 'workspace-page'}>
+      <PageLoader variant={variant} page />
+    </div>
+  )
+  return (
+    <div className="flex min-h-[70dvh] items-center justify-center px-4 py-10">
+      <section role="status" className="card w-full max-w-md space-y-4 p-5 sm:p-7">
+        <h1 className="font-serif text-2xl text-gray-100">Reconnecting to your session</h1>
+        <p className="text-sm text-gray-300">{initError}</p>
+        <p className="text-xs leading-relaxed text-gray-400">Keep this page open. Your sign-in cookies have not been cleared; we will retry automatically when the server is available.</p>
+        <button type="button" className="btn-primary w-full" disabled={initBusy} onClick={() => void init()}>{initBusy ? 'Reconnecting...' : 'Retry connection'}</button>
+      </section>
+    </div>
+  )
+}
+
 export function ProtectedRoute() {
   const { user, initialized } = useAuthStore()
   const loc = useLocation()
-  if (!initialized) return <PageLoader />
+  if (!initialized) return <SessionRestore />
   if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname }} />
   return <Outlet />
 }
@@ -73,7 +100,7 @@ export function AdminRoute() {
 
 export function PublicOnlyRoute() {
   const { user, initialized } = useAuthStore()
-  if (!initialized) return <PageLoader />
+  if (!initialized) return <SessionRestore />
   if (user) return <Navigate to="/dashboard" replace />
   return <Outlet />
 }

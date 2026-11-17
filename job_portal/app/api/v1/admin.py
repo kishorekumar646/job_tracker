@@ -33,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...auth import auth_manager
 from ...database import get_async_db, settings
 from ...deps import require_admin
-from ...models import BankEntry, WebhookLog, Application, AutoApplyRun, Feedback, Job, JobPreference, Notification, Order, Passkey, PasskeyChallenge, Subscription, Transaction, SocialAccount, User, UserProfile
+from ...models import BankEntry, WebhookLog, Application, AutoApplyRun, AutoApplyRunJob, Feedback, Job, JobPreference, Notification, Order, Passkey, PasskeyChallenge, Subscription, Transaction, SocialAccount, User, UserProfile
 from ...schemas import AdminCreateUser, AdminNameUpdate, AdminRoleUpdate, AdminTotpResult, AdminUserDetail, AdminUserList, AdminUserOut, AdminOrderOut, WebhookLogOut
 from ...schemas import AdminFeedbackOut, FeedbackList, FeedbackOut, FeedbackUpdate
 from ...services.billing import expire_old, mark_paid, pending_by_amount
@@ -241,6 +241,9 @@ async def reset_totp(user_id: int, db: AsyncSession = Depends(get_async_db)):
 async def delete_user(user_id: int, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_async_db)):
     user = await _get(db, user_id)
     _not_self(admin, user, "delete")
+    await db.execute(delete(AutoApplyRunJob).where(
+        AutoApplyRunJob.run_id.in_(select(AutoApplyRun.id).where(AutoApplyRun.user_id == user.id)),
+    ))
     await db.execute(delete(AutoApplyRun).where(AutoApplyRun.user_id == user.id))
     order_ids = select(Order.id).where(Order.user_id == user.id)
     await db.execute(delete(Transaction).where(Transaction.order_id.in_(order_ids)))

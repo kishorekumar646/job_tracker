@@ -355,6 +355,8 @@ async def test_users_are_isolated(client, user):
 async def test_auto_apply_requires_setup(client, user):
     status = (await client.get(f"{API}/auto-apply/status")).json()
     assert status["ready"] is False and len(status["blockers"]) == 3
+    assert status["schedule_interval_minutes"] == 0
+    assert status["next_scheduled_at"] is None and status["scheduled_sweep_running"] is False
     assert (await client.post(f"{API}/auto-apply/run")).status_code == 400
 
 
@@ -399,6 +401,84 @@ async def test_auto_apply_end_to_end(client, user):
     assert (await client.get(f"{API}/applications/stats")).json()["auto_applied"] == 3
 
 
+async def test_auto_apply_run_job_details_persist_and_are_private(client, user, monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from sqlalchemy import func, select, update
+    from app.database import async_session_factory
+    from app.models import AutoApplyRunJob, Job
+    from app.services import auto_apply
+
+    monkeypatch.setattr(auto_apply, "sync_for_preferences", AsyncMock())
+    monkeypatch.setattr(auto_apply, "score_job", lambda job, *_: SimpleNamespace(
+        eligible=True, score={"Recorded role": 95, "Queued role": 90, "Skipped role": 20}[job.title],
+    ))
+    await client.put(f"{API}/profile", json={"skills": ["Python"]})
+    await client.put(f"{API}/preferences", json={
+        "job_titles": ["Engineer"], "daily_limit": 3, "min_match_score": 50,
+    })
+    await client.put(f"{API}/connections/linkedin", json={"handle": "preview"})
+    async with async_session_factory() as db:
+        await db.execute(update(Job).values(is_active=False))
+        recorded = Job(
+            title="Recorded role", company="Recorded company", location="Remote", source="linkedin",
+            job_url="https://example.test/recorded",
+        )
+        db.add_all([recorded, Job(
+            title="Queued role", company="Feed company", location="Preview city", source="other",
+            external_id="remotive-run-details", job_url="https://example.test/queued",
+        ), Job(title="Skipped role", company="Skipped company", source="linkedin", job_url="https://example.test/skipped")])
+        await db.commit()
+        job_id = recorded.id
+
+    first = (await client.post(f"{API}/auto-apply/run")).json()
+    assert first["applied"] == 2 and first["evaluated"] == 3 and first["skipped"] == 1
+    assert first["details_recorded"] is True
+    endpoint = f"{API}/auto-apply/runs/{first['id']}"
+    detail = (await client.get(endpoint)).json()
+    assert [(job["title"], job["company"], job["match_score"], job["outcome"]) for job in detail["jobs"]] == [
+        ("Recorded role", "Recorded company", 95, "applied"),
+        ("Queued role", "Feed company", 90, "to_apply"),
+    ]
+    assert detail["jobs"][0]["location"] == "Remote" and detail["jobs"][0]["source"] == "linkedin"
+    assert detail["jobs"][1]["external_link"] == "https://example.test/queued"
+    apps = (await client.get(f"{API}/applications")).json()
+    for application in apps:
+        await client.patch(f"{API}/applications/{application['id']}", json={"status": "offer"})
+    async with async_session_factory() as db:
+        recorded = await db.get(Job, job_id)
+        recorded.title = "Renamed after the run"
+        await db.commit()
+    assert (await client.get(endpoint)).json() == detail
+    for application in apps:
+        await client.delete(f"{API}/applications/{application['id']}")
+    await client.delete(f"{API}/connections/linkedin")
+    # Removing tracker entries and links must not erase the run's saved evidence.
+    assert (await client.get(endpoint)).json() == detail
+    async with async_session_factory() as db:
+        recorded = await db.get(Job, job_id)
+        await db.delete(recorded)
+        await db.commit()
+    assert (await client.get(endpoint)).json() == detail
+
+    await client.put(f"{API}/connections/linkedin", json={"handle": "preview"})
+    second = (await client.post(f"{API}/auto-apply/run")).json()
+    second_detail = (await client.get(f"{API}/auto-apply/runs/{second['id']}")).json()
+    assert second["id"] != first["id"] and [job["title"] for job in second_detail["jobs"]] == ["Queued role"]
+    assert (await client.get(endpoint)).json() == detail
+    assert (await client.get(f"{API}/auto-apply/runs/999999")).status_code == 404
+
+    await register(client, "other-run@gmail.com", "Other")
+    assert (await client.get(endpoint)).status_code == 404
+    assert (await client.get(f"{API}/auto-apply/runs")).json() == []
+    await _make_admin("other-run@gmail.com")
+    assert (await client.delete(f"{API}/admin/users/{user['id']}")).status_code == 204
+    async with async_session_factory() as db:
+        assert await db.scalar(select(func.count()).select_from(AutoApplyRunJob)) == 0
+    client.cookies.clear()
+    assert (await client.get(endpoint)).status_code == 401
+
+
 async def test_scheduled_sweep(client, user):
     from app.services.auto_apply import sweep_all_users
     await client.put(f"{API}/profile", json={"skills": ["Python", "FastAPI", "Docker", "AWS"]})
@@ -407,6 +487,9 @@ async def test_scheduled_sweep(client, user):
     await client.put(f"{API}/connections/naukri", json={"handle": "asha_nk"})
     assert await sweep_all_users() > 0
     assert len((await client.get(f"{API}/applications")).json()) > 0
+    run = (await client.get(f"{API}/auto-apply/runs")).json()[0]
+    detail = (await client.get(f"{API}/auto-apply/runs/{run['id']}")).json()
+    assert detail["trigger"] == "scheduled" and len(detail["jobs"]) == run["applied"]
 
 
 # ---------- admin ----------
@@ -432,6 +515,7 @@ async def test_remove_pro_requires_authentication(client):
 
 
 async def test_pro_welcome_once_per_activation_and_account(client):
+    from asyncio import gather
     from httpx import Cookies
 
     endpoint = f"{API}/profile/pro-welcome"
@@ -448,8 +532,8 @@ async def test_pro_welcome_once_per_activation_and_account(client):
     client.cookies.clear()
     client.cookies.update(target_cookies)
     assert (await client.get(f"{API}/auth/me")).json()["pro_welcome_pending"] is True
-    assert (await client.post(endpoint)).json() == {"show": True}
-    assert (await client.post(endpoint)).json() == {"show": False}
+    claims = await gather(client.post(endpoint), client.post(endpoint))
+    assert sorted(response.json()["show"] for response in claims) == [False, True]
     assert (await client.get(f"{API}/auth/session")).json()["user"]["pro_welcome_pending"] is False
     assert (await client.post(f"{API}/auth/refresh")).json()["user"]["pro_welcome_pending"] is False
     target_cookies = Cookies(client.cookies)
@@ -532,6 +616,8 @@ async def test_admin_grants_and_extends_complimentary_pro(client, user, monkeypa
     assert billing["plan"] == "pro" and billing["plan_expires_at"] == extended["plan_expires_at"]
     assert billing["lifetime_limit"] is None and billing["daily_limit"] == settings.PRO_DAILY_APPLY_LIMIT
     assert (await client.get(f"{API}/auto-apply/status")).json()["lifetime_limit"] is None
+    assert (await client.get(f"{API}/auth/me")).json()["pro_welcome_pending"] is True
+    assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": True}
 
 
 @pytest.mark.parametrize("paid", [False, True])
@@ -839,6 +925,12 @@ async def test_checkout_and_webhook_auto_verify(client, monkeypatch):
     co2 = (await client.post("/api/v1/billing/orders")).json()
     dup = await client.post(hook, content=f"Rs.{co2['amount']} credited. UPI Ref 412345678901", headers=hdr)
     assert dup.json()["result"] == "DUPLICATE"
+    assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": False}
+    renewal = await client.post(hook, json={
+        "message": f"Rs.{co2['amount']} credited. UPI Ref 412345678902 {co2['order']['order_ref']}",
+    }, headers=hdr)
+    assert renewal.json()["matched"] is True
+    assert (await client.get(f"{API}/auth/me")).json()["pro_welcome_pending"] is False
     assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": False}
 
 

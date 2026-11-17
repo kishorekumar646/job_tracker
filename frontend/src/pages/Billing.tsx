@@ -137,7 +137,7 @@ export default function Billing() {
 
   const invoice = (o: Order) => billingApi.downloadInvoice(o).catch((e) => toast.error(errorMessage(e)))
 
-  if (!me) return <PageLoader variant="cards" />
+  if (!me) return <PageLoader variant="billing" page />
   const pro = me.plan === 'pro'
   const common = ['Live job feed', 'Application tracking']
 

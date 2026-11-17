@@ -168,7 +168,7 @@ function AccountCard() {
 
 export function SecurityPanel() {
   return (
-    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+    <div className="grid grid-cols-1 items-start gap-5">
       <div className="min-w-0 space-y-5">
         <section className="card space-y-4 p-4 sm:p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-brand-400" />Account protection</h2>
@@ -215,7 +215,7 @@ export function ProfilePanel() {
   }
 
   return (
-    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+    <div className="grid grid-cols-1 items-start gap-5">
       <AccountCard />
       <div className="min-w-0 space-y-5">
         <div className="flex items-center justify-between gap-4">

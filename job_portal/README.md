@@ -41,6 +41,41 @@ An exported `DATABASE_URL` in your shell takes precedence over the `.env` value.
    minimum match score on connected platforms, up to your daily limit. It runs on a schedule
    (`AUTO_APPLY_INTERVAL_MINUTES`, default 30, `0` disables) or on demand.
 
+### Automatic run timing
+
+The **Automatic run schedule** card at the top of Auto-apply shows the server's actual configured
+interval and an **Enable automatic runs** switch. Enabled, ready accounts see the next server check
+in their browser's local time zone with an explicit 12-hour AM/PM clock, or an in-progress indicator during a sweep. This is a shared
+interval, not a user-selectable daily clock time. The first check is one interval after startup;
+later checks are one interval after the preceding sweep finishes. Restarting resets the timer.
+The displayed check starts processing eligible accounts in turn, not every account at that exact
+instant. Setup, daily/plan limits, duplicates and match thresholds still apply.
+
+`GET /api/v1/auto-apply/status` reports `schedule_interval_minutes`, `next_scheduled_at` (UTC, nullable)
+and `scheduled_sweep_running`. A missing next check is not inferred from the last manual/user run.
+The page explicitly identifies disabled or unavailable scheduling instead of promising background runs.
+With scheduling disabled, a saved preference can be turned off but cannot be newly enabled from the page.
+
+The Render Free blueprint deliberately sets `AUTO_APPLY_INTERVAL_MINUTES=0`. Only **Run now** is
+available there until an administrator enables scheduling on an always-on backend. Setting a positive
+interval does not prevent Render Free from sleeping; sleeping processes cannot run scheduled jobs.
+No hosting plan or deployment setting is changed by the account switch.
+
+### Auto-apply run history
+
+Expand a run under Auto-apply > Run history to see its exact start time, trigger, evaluated/
+skipped totals, message and the jobs added to the tracker. Each job shows its title, company,
+location, source, match score, outcome and original posting link.
+**Queued for submission** means the user must finish applying on the employer's website;
+**Recorded as applied** is a tracker record, not proof of an external submission.
+Outcomes are snapshots from the run, not the application's current pipeline status.
+
+New manual and scheduled runs save job snapshots atomically with their applications. The history
+survives later edits/deletion of a job or tracker entry, but is removed when the account is deleted.
+`GET /api/v1/auto-apply/runs/{id}` returns details only for the signed-in user's run.
+Older runs retain their totals and explicitly report that job-by-job details were not saved;
+timestamps are not used to guess which applications belonged to them.
+
 ## Limitations
 
 These platforms offer no public apply API or OAuth for this use case. "Connect" stores your profile
@@ -127,6 +162,13 @@ Refresh rotation starts a new refresh lifetime (seven days by default).
 `GET /api/v1/auth/session` restores expiry metadata on reload without rotating the session.
 Login, refresh and session responses expose only timestamps alongside the public user, never
 the HttpOnly cookie values. Browser time differences are accounted for using server time.
+The default 30-minute access-token lifetime is not the seven-day sign-in lifetime: a valid
+refresh cookie renews access automatically. During session restoration, timeouts, network errors,
+server errors and hosting startup HTML keep the page in a reconnecting state, not the login
+screen. Restoration retries every 15 seconds while visible/online, on return/reconnect, or manually.
+Only a confirmed authentication rejection ends restoration as signed out. Signing out, a revoked
+refresh token or signing into another device (the current backend stores one refresh token per
+account) can still require sign-in before seven days.
 
 ## Admin Pro access and live totals
 
@@ -161,8 +203,10 @@ every 30 seconds while visible, including grants made by an admin on another dev
 
 ## Loading placeholders
 
-Initial page and settings loads show the original RCA-style soft-pulse placeholders for lists, tables, cards,
-forms and dashboard charts. They are replaced by the real content (or empty state) when requests
+Initial session restoration and page loads use page-shaped skeletons rather than a universal list:
+dashboard metrics/chart/recent activity, job cards, application rows, the auto-apply schedule/preferences/
+history, plan cards, connected-platform cards, admin tables and settings forms. Placeholders use a moving
+shimmer highlight, not just pulsing bars. They are replaced by the real content (or empty state) when requests
 finish; fast responses may show them only briefly. Background polling keeps already loaded content
 visible instead of replacing it with placeholders. Reduced-motion preferences disable shimmer
 animation, and screen readers receive a loading status rather than decorative placeholder shapes.
@@ -228,6 +272,10 @@ Page headings and signup progress steps are centered within the form card; field
 
 Settings > Profile shows the account's current Free or Pro plan tag beside its identity details,
 separately from the Admin/User role.
+Account details, Resume and About you stack vertically at every screen size rather than
+splitting the profile into side-by-side desktop columns.
+Security also stacks Account protection, Session & security and Biometric & device sign-in
+vertically at every screen size.
 The top profile button and its hover card show Free plan or Pro plan instead of the account role;
 admin navigation and permissions still use the account role.
 

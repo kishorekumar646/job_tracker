@@ -231,6 +231,26 @@ class AutoApplyRun(Base):
     applied: Mapped[int] = mapped_column(Integer, default=0)
     skipped: Mapped[int] = mapped_column(Integer, default=0)
     message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    details_recorded: Mapped[bool] = mapped_column(Boolean, default=True)
+    jobs: Mapped[list["AutoApplyRunJob"]] = relationship(
+        back_populates="run", cascade="all, delete-orphan", order_by="AutoApplyRunJob.id",
+    )
+
+
+class AutoApplyRunJob(Base):
+    """Job details and outcome as recorded at the time of a run."""
+    __tablename__ = "auto_apply_run_jobs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(Integer, ForeignKey("auto_apply_runs.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String)
+    company: Mapped[str] = mapped_column(String)
+    location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    source: Mapped[str] = mapped_column(String)
+    external_link: Mapped[str] = mapped_column(String)
+    match_score: Mapped[int] = mapped_column(Integer)
+    outcome: Mapped[str] = mapped_column(String)
+
+    run: Mapped[AutoApplyRun] = relationship(back_populates="jobs")
 
 
 class Announcement(Base):

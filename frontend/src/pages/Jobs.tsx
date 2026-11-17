@@ -123,7 +123,7 @@ export default function Jobs() {
         <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={hideApplied} onChange={(e) => setHideApplied(e.target.checked)} className="h-4 w-4 rounded border-gray-700 text-brand-400" />Hide jobs I've applied to</label>
       </FilterBar>
 
-      {!jobs ? <PageLoader /> : jobs.length === 0 ? (
+      {!jobs ? <PageLoader variant="jobs" /> : jobs.length === 0 ? (
         <div className="card"><EmptyState icon={<Search className="h-6 w-6" />} title="No jobs found" text="Try different filters, or add a job you found elsewhere." /></div>
       ) : (
         <div className="space-y-4">
