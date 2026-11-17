@@ -7,6 +7,7 @@ import {
   LockKeyhole, Mail, Menu, Search, ShieldCheck, Smartphone, Sparkles, X,
 } from 'lucide-react'
 import { DEVELOPER_LINKS, Logo } from '../components/layout'
+import { AppInstall } from '../components/ui/AppInstall'
 import { useAuthStore } from '../store/authStore'
 import './Landing.css'
 
@@ -44,6 +45,7 @@ const FAQS = [
   { q: 'Does auto-apply submit applications on other websites?', a: 'No. Auto-apply currently creates matching entries in your JobPilot tracker. Connections save platform profile links, not passwords. Complete the real application on the original employer or job-board website.' },
   { q: 'How do I get started?', a: 'Sign up with a Gmail address, add JobPilot to your authenticator app and enter its 6-digit code. Then add your resume and preferences. Verify your email in Profile before connecting accounts or using auto-apply.' },
   { q: 'Can I use JobPilot on my phone?', a: 'Yes. The workspace adapts to mobile screens and can be installed as a web app where supported. Optional passkeys can use Face ID, fingerprint or your device PIN. Your device chooses the verification method.' },
+  { q: 'Do I have to install it, and can I remove it?', a: 'Installation is optional: the website works without it. JobPilot installs through your browser, without an APK download. Remove it using your device app settings or browser app menu. Uninstalling does not delete your account or server-held data; contact the developer for account or data requests. Review the privacy and device-access details beside Install App before installing.' },
   { q: 'Is there a free plan?', a: 'Yes. Start with the free plan and its included limits. Your Plans page shows the current Pro price, access duration and usage limits before you decide to upgrade. Pro payments use UPI with server-side verification.' },
   { q: 'How fresh are the job listings?', a: 'Visible pages refresh saved data every 30 seconds. Fetch live jobs imports new external listings; eligible scheduled auto-apply runs can also import jobs. Background schedules depend on server availability and can pause on sleeping free hosting.' },
 ]
@@ -165,6 +167,7 @@ export default function Landing() {
       </header>
 
       <main>
+        <AppInstall variant="banner" />
         <section className="landing-hero landing-container" aria-labelledby="landing-title">
           <div className="landing-hero-orb landing-hero-orb-one" aria-hidden="true" /><div className="landing-hero-orb landing-hero-orb-two" aria-hidden="true" />
           <div className="landing-hero-copy">

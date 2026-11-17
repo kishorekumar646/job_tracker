@@ -170,3 +170,11 @@
   .account-nav-links > a:last-child { padding: 8px 10px; }
   .auth-card > h1, .onboarding-page h1 { font-size: 30px; }
 }
+/* Installation guidance is shared by the public banner and the workspace dialog. */
+.install-privacy { flex-basis: 100%; min-width: 0; border-top: 1px solid rgb(230 201 151 / 20%); padding-top: 14px; color: #b6bdc3; font-size: 12px; line-height: 1.8; }
+.install-privacy summary { cursor: pointer; color: #e6c997; font-weight: 500; }
+.install-privacy summary svg { display: inline-block; margin-right: 7px; vertical-align: middle; }
+.install-privacy summary:focus-visible { outline: 2px solid #e6c997; outline-offset: 4px; }
+.install-privacy ul { display: grid; gap: 10px; margin-top: 14px; padding-left: 18px; list-style: disc; }
+.install-privacy strong { color: #f0eee8; font-weight: 600; }
+.install-privacy code { overflow-wrap: anywhere; color: #f0eee8; font-size: 11px; }

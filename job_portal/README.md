@@ -67,6 +67,12 @@ enabled and the backend is awake; the free Render blueprint disables that schedu
 
 - **Install App** is beside the username in the header (an install icon on phones). Chrome/Edge show the
   native prompt when eligible; iPhone/iPad users get Safari > Share > Add to Home Screen instructions.
+- The public homepage also has a prominent gold install banner directly below navigation, with a
+  full-width labeled button on phones. Visitors can install before signing up, using the same flow.
+- The banner and installation dialog explain the browser-installed app, optional installation,
+  device access, online account storage and limited service-worker cache. They show the current
+  hostname and explain that HTTPS is not a trust certification. Uninstalling does not delete
+  server-held account data; account/data requests go through the homepage's developer contact.
 - After installation the button stays hidden across visits in that browser. A new native install
   prompt restores it if the app becomes installable again. Installation in other browsers cannot
   be detected reliably.

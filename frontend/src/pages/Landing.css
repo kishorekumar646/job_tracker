@@ -37,6 +37,15 @@
 .landing-button-outline:hover { background: rgb(230 201 151 / 8%); color: var(--landing-gold); }
 .landing-menu-button { display: none; width: 38px; height: 40px; align-items: center; justify-content: center; border: 1px solid var(--landing-border); border-radius: 7px; color: #ede7db; }
 .landing-mobile-nav { display: none; }
+.landing-install-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; margin-top: 24px; border: 1px solid rgb(230 201 151 / 45%); border-radius: 12px; padding: 22px 26px; background: radial-gradient(ellipse at top left, rgb(230 201 151 / 15%), transparent 75%), #141b1c; box-shadow: 0 8px 35px rgb(230 201 151 / 7%); animation: landing-enter .6s ease both; }
+.landing-install-icon { display: grid; width: 52px; height: 52px; flex-shrink: 0; place-items: center; border: 1px solid rgb(230 201 151 / 30%); border-radius: 14px; background: rgb(230 201 151 / 9%); color: var(--landing-gold); }
+.landing-install-copy { min-width: 0; flex: 1; }
+.landing-install-eyebrow { color: var(--landing-gold); font-size: 8px; font-weight: 600; letter-spacing: 1.5px; }
+.landing-install-copy h2 { margin-top: 5px; font-size: 20px; font-weight: 500; letter-spacing: -.4px; line-height: 1.3; }
+.landing-install-copy > p:not(.landing-install-eyebrow) { margin-top: 6px; color: #b6bdc3; font-size: 12px; line-height: 1.6; }
+.landing-install-copy .landing-install-reassurance { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--landing-mint); font-size: 10px; }
+.landing .landing-install-button { min-height: 48px; flex-shrink: 0; gap: 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.landing-install-button:disabled { cursor: wait; opacity: .7; }
 .landing-hero { position: relative; display: grid; min-height: 790px; grid-template-columns: 1.04fr 1fr; align-items: center; gap: 68px; padding-block: 88px 110px; }
 .landing-hero-orb { position: absolute; z-index: 0; width: 420px; height: 420px; border-radius: 50%; filter: blur(90px); pointer-events: none; animation: landing-drift 16s ease-in-out infinite alternate; }
 .landing-hero-orb-one { top: -150px; left: -280px; background: rgb(139 151 126 / 10%); }
@@ -297,6 +306,12 @@
 }
 @media (max-width: 767px) {
   .landing-container { width: calc(100% - 40px); }
+  .landing-install-banner { flex-wrap: wrap; gap: 14px; margin-top: 16px; padding: 18px; }
+  .landing-install-icon { width: 42px; height: 42px; border-radius: 11px; }
+  .landing-install-copy h2 { font-size: 17px; }
+  .landing-install-copy > p:not(.landing-install-eyebrow) { font-size: 11px; }
+  .landing-install-eyebrow { font-size: 7px; letter-spacing: 1px; }
+  .landing .landing-install-button { width: 100%; }
   .landing-nav { min-height: 72px; }
   .landing-hero { min-height: 0; grid-template-columns: 1fr; gap: 35px; padding-block: 55px 85px; }
   .landing-hero-copy { max-width: 550px; }
