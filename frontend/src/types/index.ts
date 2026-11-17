@@ -24,6 +24,7 @@ export interface User {
   receive_announcements: boolean
   plan: string
   plan_expires_at: string | null
+  pro_welcome_pending: boolean
   created_at: string | null
 }
 

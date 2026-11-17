@@ -1,5 +1,6 @@
 // Author: Kishore Kumar
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Cake, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CircleMinus, Clock, Copy, Crown, Eye, Gift, MailCheck, Pencil, RefreshCw, Search,
   ShieldCheck, ShieldOff, Trash2, UserCheck, UserPlus, UserX, Users, Wifi, X as XIcon,
@@ -12,7 +13,7 @@ import { toast } from '../store/toastStore'
 import { useDataRefresh } from '../hooks/useDataRefresh'
 
 const PAGE_SIZE = 10
-const GRID = 'grid grid-cols-2 gap-3 xl:grid-cols-[minmax(190px,1fr)_130px_90px_110px_130px_110px_176px]'
+const GRID = 'grid grid-cols-2 gap-3 xl:grid-cols-[minmax(190px,1fr)_130px_90px_110px_130px_110px_232px]'
 type RoleFilter = 'all' | 'user' | 'admin'
 type StatusFilter = 'all' | 'pending' | 'active' | 'inactive' | 'online' | 'offline'
 type SortField = 'email' | 'created_at'
@@ -53,11 +54,47 @@ const ACTION_COLORS = {
   emerald: 'hover:bg-emerald-500/10 hover:text-emerald-400', amber: 'hover:bg-amber-500/10 hover:text-amber-400', brand: 'hover:bg-brand-500/10 hover:text-brand-400',
   gray: 'hover:bg-gray-700 hover:text-gray-200', red: 'hover:bg-red-500/10 hover:text-red-400', sky: 'hover:bg-sky-500/10 hover:text-sky-400',
 }
-function ActionBtn({ title, icon, color, disabled, onClick }: { title: string; icon: ReactNode; color: keyof typeof ACTION_COLORS; disabled?: boolean; onClick: () => void }) {
+function ActionBtn({ title, icon, color, disabled, disabledReason, onClick }: { title: string; icon: ReactNode; color: keyof typeof ACTION_COLORS; disabled?: boolean; disabledReason?: string; onClick: () => void }) {
+  const tooltipId = useId()
+  const [anchor, setAnchor] = useState<{ left: number; top: number; above: boolean } | null>(null)
+  const showTooltip = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect()
+    const above = rect.top >= 64
+    setAnchor({
+      left: Math.max(120, Math.min(window.innerWidth - 120, rect.left + rect.width / 2)),
+      top: above ? rect.top - 8 : rect.bottom + 8,
+      above,
+    })
+  }
+  useEffect(() => {
+    if (!anchor) return
+    const hide = () => setAnchor(null)
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') hide() }
+    window.addEventListener('scroll', hide, true)
+    window.addEventListener('resize', hide)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('scroll', hide, true)
+      window.removeEventListener('resize', hide)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [anchor])
+
   return (
-    <button title={title} aria-label={title} disabled={disabled} onClick={onClick} className={`flex h-11 w-11 items-center justify-center rounded-lg border border-gray-800 text-gray-500 transition-colors disabled:cursor-not-allowed disabled:opacity-30 xl:h-7 xl:w-7 ${ACTION_COLORS[color]}`}>
-      {icon}
-    </button>
+    <span className="inline-flex shrink-0" onMouseEnter={(event) => showTooltip(event.currentTarget)} onMouseLeave={() => setAnchor(null)}>
+      <button type="button" aria-label={title} aria-describedby={anchor ? tooltipId : undefined} disabled={disabled}
+        onFocus={(event) => showTooltip(event.currentTarget)} onBlur={() => setAnchor(null)}
+        onClick={() => { setAnchor(null); onClick() }}
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-800 text-gray-500 transition-colors disabled:cursor-not-allowed disabled:opacity-30 xl:h-7 xl:w-7 ${ACTION_COLORS[color]}`}>
+        {icon}
+      </button>
+      {anchor && createPortal(
+        <span id={tooltipId} role="tooltip" className="pointer-events-none fixed z-[80] w-max max-w-56 rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-center text-xs text-gray-100 shadow-xl"
+          style={{ left: anchor.left, top: anchor.top, transform: anchor.above ? 'translate(-50%, -100%)' : 'translateX(-50%)' }}>
+          {disabled && disabledReason ? disabledReason : title}
+        </span>, document.body,
+      )}
+    </span>
   )
 }
 
@@ -291,7 +328,7 @@ export function UsersTab() {
       </FilterBar>
 
       <div className="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900">
-        <div className="xl:min-w-[1010px]">
+        <div className="xl:min-w-[1104px]">
           <div className={`hidden ${GRID} border-b border-gray-800 bg-gray-800/40 px-5 py-3 xl:grid`}>
             <SortHeader label="User" field="email" active={sort} dir={dir} onToggle={toggleSort} />
             {['Date of Birth', 'Role', 'Status', 'Last Seen'].map((h) => <span key={h} className="text-xs font-semibold uppercase tracking-wider text-gray-500">{h}</span>)}
@@ -378,14 +415,14 @@ export function UsersTab() {
                       <span className="block text-[11px] text-gray-600">{created ? created.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </p>
 
-                    <div className="col-span-2 flex flex-wrap items-center gap-1.5 xl:col-span-1">
+                    <div role="group" aria-label={`Actions for ${u.email}`} className="col-span-2 flex min-w-0 items-center gap-1.5 overflow-x-auto py-1 xl:col-span-1">
                       <ActionBtn title="View profile" color="sky" icon={<Eye className="h-3.5 w-3.5" />} onClick={() => setViewing(u.id)} />
                       <ActionBtn title={u.plan === 'pro' ? 'Extend Pro' : 'Grant Pro'} color="amber" icon={<Gift className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'pro', user: u })} />
-                      {u.plan === 'pro' && <ActionBtn title="Remove Pro" color="red" icon={<CircleMinus className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'revoke-pro', user: u })} />}
-                      <ActionBtn title={u.role === 'admin' ? 'Demote to User' : 'Promote to Admin'} color={u.role === 'admin' ? 'amber' : 'brand'} disabled={self} icon={u.role === 'admin' ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'role', user: u })} />
-                      <ActionBtn title={u.is_active ? 'Deactivate' : 'Activate'} color="gray" disabled={self} icon={u.is_active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'status', user: u })} />
+                      {u.plan === 'pro' ? <ActionBtn title="Remove Pro" color="red" icon={<CircleMinus className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'revoke-pro', user: u })} /> : <span aria-hidden="true" className="h-11 w-11 shrink-0 xl:h-7 xl:w-7" />}
+                      <ActionBtn title={u.role === 'admin' ? 'Demote to User' : 'Promote to Admin'} color={u.role === 'admin' ? 'amber' : 'brand'} disabled={self} disabledReason="You cannot change your own role" icon={u.role === 'admin' ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'role', user: u })} />
+                      <ActionBtn title={u.is_active ? 'Deactivate' : 'Activate'} color="gray" disabled={self} disabledReason="You cannot deactivate your own account" icon={u.is_active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'status', user: u })} />
                       <ActionBtn title="Reset TOTP" color="gray" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'totp', user: u })} />
-                      <ActionBtn title="Delete user" color="red" disabled={self} icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'delete', user: u })} />
+                      <ActionBtn title="Delete user" color="red" disabled={self} disabledReason="You cannot delete your own account" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'delete', user: u })} />
                     </div>
                   </div>
                 )

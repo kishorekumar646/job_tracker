@@ -61,6 +61,7 @@ class User(Base):
     receive_announcements: Mapped[bool] = mapped_column(Boolean, default=True)
     plan: Mapped[str] = mapped_column(String, default="free")
     plan_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    pro_welcome_pending: Mapped[bool] = mapped_column(Boolean, default=False)
     last_seen: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

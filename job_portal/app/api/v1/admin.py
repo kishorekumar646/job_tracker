@@ -175,6 +175,7 @@ async def revoke_user_pro(user_id: int, admin: User = Depends(require_admin), db
     if effective_plan(user) != "pro":
         raise HTTPException(status.HTTP_409_CONFLICT, "This account is already on the Free plan")
     user.plan, user.plan_expires_at = "free", None
+    user.pro_welcome_pending = False
     await db.execute(
         update(Subscription).where(
             Subscription.user_id == user.id, Subscription.plan_id == "pro", Subscription.status == "ACTIVE",

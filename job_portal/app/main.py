@@ -41,6 +41,7 @@ _COLUMN_UPGRADES = [
     ("users", "receive_announcements", True),
     ("users", "plan", "free"),
     ("users", "plan_expires_at", None),
+    ("users", "pro_welcome_pending", False),
     ("notifications", "read_at", None),
     ("user_profiles", "resume_data", None),
 ]

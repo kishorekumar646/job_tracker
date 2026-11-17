@@ -28,11 +28,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...database import get_async_db, settings
 from ...deps import get_current_user
 from ...models import JobPreference, User, UserProfile
-from ...schemas import GuideClaim, PreferencesOut, PreferencesUpdate, ProfileOut, ProfileUpdate, UserOut
+from ...schemas import GuideClaim, PreferencesOut, PreferencesUpdate, ProfileOut, ProfileUpdate, ProWelcomeClaim, UserOut
 from ...services.presenters import profile_out
 from ...services.skills import ResumeError, canonical_skill, extract_resume_text, extract_skills
 
 router = APIRouter(tags=["profile"])
+
+
+@router.post("/profile/pro-welcome", response_model=ProWelcomeClaim)
+async def claim_pro_welcome(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+    result = await db.execute(update(User).where(
+        User.id == user.id,
+        User.pro_welcome_pending.is_(True),
+        User.plan == "pro",
+        User.plan_expires_at > datetime.utcnow(),
+    ).values(pro_welcome_pending=False).returning(User.id))
+    claimed = result.scalar_one_or_none()
+    await db.commit()
+    return ProWelcomeClaim(show=claimed is not None)
 
 
 @router.post("/profile/guide", response_model=GuideClaim)

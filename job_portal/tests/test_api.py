@@ -431,6 +431,61 @@ async def test_remove_pro_requires_authentication(client):
     assert (await client.delete(f"{API}/admin/users/1/pro")).status_code == 401
 
 
+async def test_pro_welcome_once_per_activation_and_account(client):
+    from httpx import Cookies
+
+    endpoint = f"{API}/profile/pro-welcome"
+    assert (await client.post(endpoint)).status_code == 401
+    target, _ = await register(client)
+    target_cookies = Cookies(client.cookies)
+    assert (await client.post(endpoint)).json() == {"show": False}
+    await register(client, "boss@gmail.com", "Boss")
+    await _make_admin("boss@gmail.com")
+    admin_cookies = Cookies(client.cookies)
+
+    await client.post(f"{API}/admin/users/{target['id']}/pro")
+    assert (await client.post(endpoint)).json() == {"show": False}
+    client.cookies.clear()
+    client.cookies.update(target_cookies)
+    assert (await client.get(f"{API}/auth/me")).json()["pro_welcome_pending"] is True
+    assert (await client.post(endpoint)).json() == {"show": True}
+    assert (await client.post(endpoint)).json() == {"show": False}
+    assert (await client.get(f"{API}/auth/session")).json()["user"]["pro_welcome_pending"] is False
+    assert (await client.post(f"{API}/auth/refresh")).json()["user"]["pro_welcome_pending"] is False
+    target_cookies = Cookies(client.cookies)
+
+    client.cookies.clear()
+    client.cookies.update(admin_cookies)
+    await client.post(f"{API}/admin/users/{target['id']}/pro")
+    client.cookies.clear()
+    client.cookies.update(target_cookies)
+    assert (await client.post(endpoint)).json() == {"show": False}
+
+    client.cookies.clear()
+    client.cookies.update(admin_cookies)
+    await client.delete(f"{API}/admin/users/{target['id']}/pro")
+    await client.post(f"{API}/admin/users/{target['id']}/pro")
+    client.cookies.clear()
+    client.cookies.update(target_cookies)
+    assert (await client.post(endpoint)).json() == {"show": True}
+    assert (await client.post(endpoint)).json() == {"show": False}
+
+
+@pytest.mark.parametrize("plan,days,pending", [("free", 1, True), ("pro", -1, True), ("pro", 1, False)])
+async def test_pro_welcome_requires_active_unseen_pro(client, user, plan, days, pending):
+    from datetime import datetime, timedelta
+    from app.database import async_session_factory
+    from app.models import User
+
+    async with async_session_factory() as db:
+        target = await db.get(User, user["id"])
+        target.plan = plan
+        target.plan_expires_at = datetime.utcnow() + timedelta(days=days)
+        target.pro_welcome_pending = pending
+        await db.commit()
+    assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": False}
+
+
 async def test_admin_grants_and_extends_complimentary_pro(client, user, monkeypatch):
     from datetime import datetime, timedelta
     from sqlalchemy import func, select
@@ -762,6 +817,7 @@ async def test_checkout_and_webhook_auto_verify(client, monkeypatch):
     assert f"tn={ref}" in co["upi_uri"] and co["qr_code"].startswith("data:image") and 0 < co["seconds_left"] <= 900
     assert co["order"]["unique_amount"] != co["order"]["base_amount"]
     assert (await client.post("/api/v1/billing/orders")).json()["order"]["id"] == co["order"]["id"]
+    assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": False}
 
     hook = "/api/webhooks/payment-verify"
     assert (await client.post(hook, json={"text": "x"})).status_code == 401
@@ -774,12 +830,16 @@ async def test_checkout_and_webhook_auto_verify(client, monkeypatch):
     assert (await client.get(f"/api/v1/billing/orders/{co['order']['id']}")).json()["status"] == "PAID"
     me = (await client.get("/api/v1/billing/me")).json()
     assert me["plan"] == "pro" and me["lifetime_limit"] is None and me["daily_limit"] == settings.PRO_DAILY_APPLY_LIMIT
+    assert (await client.get(f"{API}/auth/me")).json()["pro_welcome_pending"] is True
+    assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": True}
+    assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": False}
     pdf = await client.get(f"/api/v1/billing/orders/{co['order']['id']}/invoice")
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
     # the same UTR cannot pay a second order
     co2 = (await client.post("/api/v1/billing/orders")).json()
     dup = await client.post(hook, content=f"Rs.{co2['amount']} credited. UPI Ref 412345678901", headers=hdr)
     assert dup.json()["result"] == "DUPLICATE"
+    assert (await client.post(f"{API}/profile/pro-welcome")).json() == {"show": False}
 
 
 async def test_admin_orders_statement_and_override(client, monkeypatch):

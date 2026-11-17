@@ -13,6 +13,7 @@ import { SessionWarning } from '../ui/SessionDetails'
 import { UserAvatar } from '../ui/UserAvatar'
 import { AppGuide } from '../ui/AppGuide'
 import { FeedbackModal } from '../ui/FeedbackModal'
+import { ProWelcome } from '../ui/ProWelcome'
 
 export function Logo({ light = false }: { light?: boolean }) {
   return (
@@ -260,6 +261,7 @@ export function AppLayout() {
         </div>
       </div>
       <SettingsModal />
+      {user && <ProWelcome key={user.id} />}
       {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
     </>
   )

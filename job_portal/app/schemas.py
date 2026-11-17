@@ -97,6 +97,7 @@ class UserOut(BaseModel):
     receive_announcements: bool = True
     plan: str = "free"
     plan_expires_at: Optional[UTCDateTime] = None
+    pro_welcome_pending: bool = False
     created_at: Optional[UTCDateTime] = None
 
 
@@ -127,6 +128,10 @@ class PasskeyOut(BaseModel):
 class GuideClaim(BaseModel):
     show: bool
     shown: int
+
+
+class ProWelcomeClaim(BaseModel):
+    show: bool
 
 
 class FeedbackCreate(BaseModel):

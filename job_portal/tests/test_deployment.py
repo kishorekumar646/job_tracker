@@ -32,12 +32,14 @@ async def test_schema_upgrade_handles_existing_rows(client, user):
         await conn.execute(text("ALTER TABLE users DROP COLUMN email_verified"))
         await conn.execute(text("ALTER TABLE users DROP COLUMN avatar"))
         await conn.execute(text("ALTER TABLE users DROP COLUMN guide_views"))
+        await conn.execute(text("ALTER TABLE users DROP COLUMN pro_welcome_pending"))
         await conn.execute(text("ALTER TABLE user_profiles DROP COLUMN resume_data"))
         await conn.run_sync(upgrade_columns)
         await conn.run_sync(upgrade_columns)
         assert not await conn.scalar(text("SELECT email_verified FROM users LIMIT 1"))
         assert await conn.scalar(text("SELECT avatar FROM users LIMIT 1")) is None
         assert await conn.scalar(text("SELECT guide_views FROM users LIMIT 1")) == 0
+        assert not await conn.scalar(text("SELECT pro_welcome_pending FROM users LIMIT 1"))
         assert await conn.scalar(text("SELECT resume_data FROM user_profiles LIMIT 1")) is None
 
 

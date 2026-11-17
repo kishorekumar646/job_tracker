@@ -26,5 +26,9 @@ def lifetime_apply_cap(user: User) -> int | None:
 
 def grant_pro(user: User) -> None:
     now = datetime.utcnow()
-    base = user.plan_expires_at if user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now else now
+    if user.plan == "pro" and user.plan_expires_at and user.plan_expires_at > now:
+        base = user.plan_expires_at
+    else:
+        base = now
+        user.pro_welcome_pending = True
     user.plan, user.plan_expires_at = "pro", base + timedelta(days=settings.PRO_DAYS)

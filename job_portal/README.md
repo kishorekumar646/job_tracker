@@ -140,11 +140,24 @@ active Pro subscriptions cancelled, including remaining paid time. The user is n
 acting admin is logged. Subscription dates, orders, payments, invoices and prior usage are
 preserved; this does not issue a refund or reset the Free lifetime limit. An account already
 on Free returns a conflict rather than issuing another removal notification.
+User action icons keep consistent positions in one row, with enough table width for all seven
+Pro actions. On narrow screens the action row scrolls horizontally instead of wrapping.
+Hover and keyboard-focus tooltips reflect the current action and explain disabled self-actions.
 
 Lists, dashboard totals, auto-apply usage, billing and admin counters refresh after successful
 changes, including deletions. Other tabs in the same browser receive a refresh signal; visible
 pages also refresh on focus and every 30 seconds to pick up server-side or other-device changes.
 Background refreshes preserve filters and unsaved profile, preference and auto-apply controls.
+
+New Pro activations (verified payments or admin grants) show a gold crown-and-confetti
+**Congratulations, you're Pro!** popup, with the expiry date and a shortcut to Auto-apply.
+It waits until the tab is visible and other dialogs are closed. Motion is brief and respects
+reduced-motion preferences; no auto-apply setting is changed by the popup.
+`POST /api/v1/profile/pro-welcome` atomically claims the welcome for the signed-in account,
+so it does not repeat on reload, another device or an extension of still-active Pro.
+Reactivation after expiry or removal receives a fresh welcome. Existing Pro accounts are not
+retroactively marked for celebration. Account plan metadata syncs on focus, after changes and
+every 30 seconds while visible, including grants made by an admin on another device.
 
 ## Loading placeholders
 

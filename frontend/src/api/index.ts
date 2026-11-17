@@ -39,6 +39,7 @@ export const authApi = {
 }
 
 export const profileApi = {
+  claimProWelcome: () => apiClient.post<{ show: boolean }>('/profile/pro-welcome').then((r) => r.data),
   get: () => apiClient.get<Profile>('/profile').then((r) => r.data),
   update: (body: ProfileUpdate) => apiClient.put<Profile>('/profile', body).then((r) => r.data),
   uploadAvatar: (file: File) => {

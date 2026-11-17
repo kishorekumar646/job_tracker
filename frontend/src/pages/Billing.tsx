@@ -8,6 +8,7 @@ import { toast } from '../store/toastStore'
 import type { BillingMe, Checkout, Order } from '../types'
 import { useDataRefresh } from '../hooks/useDataRefresh'
 import { isMobileDevice } from '../utils/device'
+import { notifyDataChanged } from '../utils/dataSync'
 
 const STATUS_STYLE: Record<string, string> = {
   PENDING: 'bg-amber-500/15 text-amber-400',
@@ -125,8 +126,8 @@ export default function Billing() {
   const done = useCallback((o: Order) => {
     setCheckout(null)
     setVerified(o)
-    load().catch((e) => toast.error(errorMessage(e)))
-  }, [load])
+    notifyDataChanged()
+  }, [])
 
   const expired = useCallback(() => {
     setCheckout(null)
