@@ -149,6 +149,11 @@ device. User-specific credential records and single-use, five-minute challenges 
 in the database. Signatures, origin, RP ID, user verification and applicable counters are verified.
 Admin TOTP resets also revoke passkeys and pending enrollment challenges.
 
+If device sign-in fails, the login page displays the error in a help popup with passkey
+enrollment steps, same-domain guidance and a **Use authenticator code** button. That button
+switches back to the existing login form without navigating away or clearing entered values.
+Closing the popup leaves the error visible and allows another device sign-in attempt.
+
 Passkeys require HTTPS, except trusted localhost development origins. Defaults support the
 frontend at `http://localhost:5173`. For another development port or hostname, set
 `WEBAUTHN_ORIGIN` and `WEBAUTHN_RP_ID` explicitly. On Render, the trusted

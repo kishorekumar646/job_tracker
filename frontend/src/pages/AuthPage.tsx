@@ -6,7 +6,7 @@ import { authApi } from '../api'
 import { errorMessage } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { AccountNavigation, BrandPanel } from '../components/layout'
-import { Field, Spinner, TotpTimer } from '../components/ui'
+import { Field, Modal, Spinner, TotpTimer } from '../components/ui'
 import { JobConstellation } from '../components/ui/JobConstellation'
 import type { SignupResponse } from '../types'
 import { isMobileDevice } from '../utils/device'
@@ -69,6 +69,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [deviceAvailable, setDeviceAvailable] = useState(false)
   const [deviceMode, setDeviceMode] = useState(false)
+  const [deviceHelpOpen, setDeviceHelpOpen] = useState(false)
   useEffect(() => {
     let active = true
     platformPasskeyAvailable().then((available) => {
@@ -108,6 +109,7 @@ export function LoginPage() {
       nav(state?.from || '/dashboard', { replace: true })
     } catch (e) {
       setError(passkeyError(e))
+      setDeviceHelpOpen(true)
     } finally {
       setBusy(false)
     }
@@ -116,12 +118,12 @@ export function LoginPage() {
   return (
     <Shell>
       <h1 className="text-3xl font-extrabold tracking-tight">Welcome back</h1>
-      <p className="mt-2 text-sm text-gray-400">{deviceMode ? 'Use the passkey you enabled in Profile settings.' : 'Sign in with the 6-digit code from your authenticator app.'}</p>
+      <p className="mt-2 text-sm text-gray-400">{deviceMode ? 'Use the passkey you enabled in Settings > Security.' : 'Sign in with the 6-digit code from your authenticator app.'}</p>
       {deviceMode ? (
         <div className="mt-8 space-y-5">
           <ErrorBox msg={error} />
           <button type="button" className="btn-primary w-full py-3" disabled={busy} onClick={() => void signInWithDevice()}>{busy ? <Spinner /> : <Fingerprint className="h-5 w-5" />}Sign in with device</button>
-          <p className="text-xs text-gray-500">Face ID, fingerprint or device PIN. You must enable this first in Profile settings.</p>
+          <p className="text-xs text-gray-500">Use your fingerprint, face recognition or screen lock. Enable device sign-in in Settings &gt; Security first.</p>
         </div>
       ) : <form onSubmit={submit} noValidate className="mt-8 space-y-5">
         {state?.justActivated && <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-300">Account activated — sign in to get started.</div>}
@@ -136,6 +138,25 @@ export function LoginPage() {
       <p className="mt-8 text-center text-sm text-gray-400">
         Don't have an account? <Link to="/signup" className="font-semibold text-brand-400 hover:text-brand-300">Sign up free</Link>
       </p>
+      <Modal open={deviceHelpOpen} title="Need help with device sign-in?" onClose={() => setDeviceHelpOpen(false)}>
+        <div className="space-y-4 text-sm leading-relaxed text-gray-300">
+          <ErrorBox msg={error} />
+          <p>Your browser may not have a matching JobPilot passkey, or device verification may have been cancelled. A phone screen lock alone does not create a JobPilot passkey.</p>
+          <h3 className="font-semibold text-gray-100">Create a passkey on this device</h3>
+          <ol className="list-outside list-decimal space-y-2 pl-5">
+            <li>Sign in using your email and a fresh Authenticator code.</li>
+            <li>Open <strong>Settings &gt; Security &gt; Biometric &amp; device sign-in</strong>.</li>
+            <li>Enter a device name and a fresh Authenticator code, then tap <strong>Enable device sign-in</strong>.</li>
+            <li>Approve your phone or computer&apos;s Create/Save passkey prompt using fingerprint, Face ID or screen lock.</li>
+            <li>Next time, choose <strong>Sign in with device</strong>. Your device decides which verification methods are available.</li>
+          </ol>
+          <p className="text-xs text-gray-400">Set up the passkey on this site: <strong className="break-all text-gray-200">{window.location.hostname}</strong>. Passkeys created on localhost or another domain do not automatically work here. If you already enrolled, check that the passkey is available in your device&apos;s password manager.</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" className="btn-primary flex-1" onClick={() => { setDeviceHelpOpen(false); setDeviceMode(false); setError('') }}>Use authenticator code</button>
+            <button type="button" className="btn-secondary" onClick={() => setDeviceHelpOpen(false)}>Got it</button>
+          </div>
+        </div>
+      </Modal>
     </Shell>
   )
 }
