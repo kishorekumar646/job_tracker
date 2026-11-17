@@ -232,8 +232,6 @@ export function SignupPage() {
                 <p className="mt-2 text-xs text-gray-400">Open a compatible installed authenticator, then return here and enter its 6-digit code. Or scan the QR from another device.</p>
               </>
             )}
-            <p className="mt-3 text-xs text-gray-400">{mobile ? 'If no app opens, add an account in your authenticator using this setup key:' : 'Can\'t scan? Enter this key manually in your authenticator:'}</p>
-            <code className="mt-1 block select-all break-all rounded-lg bg-gray-900 px-3 py-2 font-mono text-xs font-semibold text-gray-100">{setup.totp_secret}</code>
           </div>
           <Field label="Enter 6-digit code"><OtpInput value={otp} onChange={setOtp} /></Field>
           <button className="btn-primary w-full py-3" disabled={busy || otp.length !== 6}>{busy && <Spinner />}Activate account</button>

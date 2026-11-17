@@ -30,7 +30,7 @@ otherwise this command affects only your local database. Keep database credentia
 
 ## How it works
 
-1. Sign up with email and an authenticator app (TOTP, no password): on desktop, scan the QR code using your phone. On mobile devices, **Open in Authenticator** adds the account to a compatible installed app; the QR remains as an alternative. If scanning or the link is unsupported, enter the displayed setup key manually. Return to JobPilot and enter the 6-digit code to activate, then use a fresh code each time you sign in. Upload a resume (PDF/DOCX/TXT) – skills are detected automatically.
+1. Sign up with email and an authenticator app (TOTP, no password): on desktop, scan the QR code using your phone. On mobile devices, **Open in Authenticator** adds the account to a compatible installed app; the QR remains as an alternative for scanning from another device. The setup key is not displayed as text. Return to JobPilot and enter the 6-digit code to activate, then use a fresh code each time you sign in. Upload a resume (PDF/DOCX/TXT) – skills are detected automatically.
 2. Set preferred job titles, locations, job types and minimum salary.
 3. Connect LinkedIn, Naukri, Indeed, Glassdoor, Foundit or Instahyre.
 4. Auto-apply scores every job (55% skills, 30% title, 15% location), and applies to those above your
