@@ -1,21 +1,10 @@
 // Author: Kishore Kumar
-import { useEffect, useRef, useState } from 'react'
 import { Loader2, RefreshCw, WifiOff } from 'lucide-react'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 
 export function OfflineBanner() {
   const { isOnline, countdown, checking, retry } = useOnlineStatus()
-  const [visible, setVisible] = useState(false)
-  const was = useRef(isOnline)
-
-  useEffect(() => {
-    const wasOnline = was.current
-    was.current = isOnline
-    if (!isOnline) setVisible(true)
-    else if (!wasOnline && visible) window.location.reload()
-  }, [isOnline, visible])
-
-  if (!visible) return null
+  if (isOnline) return null
   return (
     <>
       <div className="fixed inset-0 z-[69] bg-black/55 backdrop-blur-[1px]" />

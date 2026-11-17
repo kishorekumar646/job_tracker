@@ -16,6 +16,7 @@ COPY job_portal/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY job_portal/app ./app
 COPY job_portal/tools/make_admin.py ./tools/make_admin.py
+COPY job_portal/createsuperuser ./createsuperuser
 COPY --from=frontend /build/frontend/dist /app/frontend/dist
 RUN useradd --create-home --uid 10001 jobpilot
 USER jobpilot

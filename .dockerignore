@@ -9,6 +9,7 @@
 !job_portal/app/**
 !job_portal/tools/
 !job_portal/tools/make_admin.py
+!job_portal/createsuperuser
 **/.env
 **/.env.*
 **/.npmrc

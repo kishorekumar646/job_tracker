@@ -90,19 +90,28 @@ dependencies. Local secret settings are intentionally not copied to Render.
 ## 4. Create the first admin
 
 1. Open the Render HTTPS address, sign up, activate TOTP, sign in, and verify your email.
-2. In your project's **Supabase SQL Editor**, run the following using your own account email:
+2. On your trusted local machine, configure the backend's private `job_portal/.env` (or process
+   environment) with the **same Supabase `DATABASE_URL` used by Render**, and the required
+   `JWT_SECRET_KEY`. Never commit these values. The command uses backend settings; a local SQLite
+   URL will change only the local database, not production.
+3. With backend dependencies installed, run:
 
-```sql
-UPDATE public.users
-SET role = 'admin', is_admin = TRUE
-WHERE email = 'YOUR_SIGNED_UP_EMAIL'
-  AND is_approved = TRUE;
+```bash
+cd job_portal
+source venv/bin/activate
+python createsuperuser
 ```
 
-3. Sign out and sign in again. The Admin page should appear.
+4. Enter the existing account's email and its current six-digit authenticator code. The code
+   is hidden while typing. Unknown, unactivated, deactivated accounts and invalid codes are
+   rejected without changing roles. This command promotes an existing account; it does not
+   create or activate one.
+5. Sign out and sign in again. The Admin page should appear.
 
-This avoids needing shell access on Render Free. No default administrator or shared admin
-password is created.
+The existing `python tools/make_admin.py <email>` entry point also requires an authenticator
+code now. The command is included in the Docker image for hosts with shell access; Render Free
+has no shell, so run it locally against Supabase. Restrict database credentials to trusted
+operators. No public admin-promotion endpoint, default administrator or shared password is created.
 
 ## 5. Optional features
 

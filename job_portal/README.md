@@ -19,6 +19,15 @@ See [Render + Supabase deployment](../DEPLOYMENT.md) for the free HTTPS subdomai
 PostgreSQL, persistent resumes, email delivery, first-admin creation and free-tier limitations.
 The free configuration is a beta/hobby deployment, not an always-on production service.
 
+## Create an administrator
+
+From `job_portal/`, activate the backend virtualenv and run `python createsuperuser`.
+Enter an existing account's email and its current authenticator code (hidden input).
+Only activated, active accounts with a valid code are promoted. Sign out and back in afterward.
+The legacy `python tools/make_admin.py <email>` command now prompts for the code too.
+For production, configure the backend with Render's Supabase `DATABASE_URL` before running;
+otherwise this command affects only your local database. Keep database credentials private.
+
 ## How it works
 
 1. Sign up with email and an authenticator app (TOTP, no password): on desktop, scan the QR code using your phone. On mobile devices, **Open in Authenticator** adds the account to a compatible installed app; the QR remains as an alternative. If scanning or the link is unsupported, enter the displayed setup key manually. Return to JobPilot and enter the 6-digit code to activate, then use a fresh code each time you sign in. Upload a resume (PDF/DOCX/TXT) – skills are detected automatically.
@@ -71,6 +80,9 @@ enabled and the backend is awake; the free Render blueprint disables that schedu
   without caching old dashboard HTML.
 - Navigation, settings, forms and admin views adapt to narrow screens; settings and dialogs scroll
   separately, and the installed app uses the device's safe area and dynamic viewport height.
+- Connectivity recovery dismisses the offline banner in place, without reloading or navigating.
+  The current page, signup step and entered values remain intact. Connectivity probes pause while
+  the app is hidden and check again on return, including after opening an authenticator app.
 
 ## Session expiry
 

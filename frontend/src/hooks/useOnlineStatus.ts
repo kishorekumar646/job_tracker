@@ -11,34 +11,58 @@ export function useOnlineStatus() {
   const [isOnline, setLocal] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
   const [countdown, setCountdown] = useState(RETRY_SECONDS)
   const [checking, setChecking] = useState(false)
-  const inFlight = useRef(false)
+  const activeCheck = useRef<AbortController | null>(null)
 
   const setIsOnline = useCallback((v: boolean) => { setLocal(v); setStore(v) }, [setStore])
 
   const ping = useCallback(async (showChecking = true) => {
-    if (inFlight.current) return
-    inFlight.current = true
+    if (activeCheck.current || document.visibilityState !== 'visible') return
     if (showChecking) setChecking(true)
     const ac = new AbortController()
+    activeCheck.current = ac
     const timer = setTimeout(() => ac.abort(), 5000)
     try {
-      await fetch('/api/v1/ping', { method: 'HEAD', cache: 'no-store', signal: ac.signal })
-      setIsOnline(true)
+      const response = await fetch('/api/v1/ping', { method: 'HEAD', cache: 'no-store', signal: ac.signal })
+      if (activeCheck.current === ac && document.visibilityState === 'visible') setIsOnline(response.ok)
     } catch {
-      setIsOnline(false)
+      if (activeCheck.current === ac && document.visibilityState === 'visible') setIsOnline(false)
     } finally {
       clearTimeout(timer)
-      inFlight.current = false
-      if (showChecking) setChecking(false)
+      if (activeCheck.current === ac) {
+        activeCheck.current = null
+        if (showChecking) setChecking(false)
+      }
     }
   }, [setIsOnline])
 
   useEffect(() => {
     const on = () => void ping(false)
-    const off = () => setIsOnline(false)
+    const off = () => {
+      if (document.visibilityState === 'visible') setIsOnline(false)
+    }
+    const cancel = () => {
+      const check = activeCheck.current
+      activeCheck.current = null
+      check?.abort()
+    }
+    const visibility = () => {
+      if (document.visibilityState === 'visible') void ping(false)
+      else {
+        cancel()
+        setChecking(false)
+      }
+    }
     window.addEventListener('online', on)
     window.addEventListener('offline', off)
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+    window.addEventListener('focus', on)
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      cancel()
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+      window.removeEventListener('focus', on)
+      document.removeEventListener('visibilitychange', visibility)
+    }
   }, [ping, setIsOnline])
 
   useEffect(() => {
