@@ -97,6 +97,12 @@ enabled and the backend is awake; the free Render blueprint disables that schedu
 - Connectivity recovery dismisses the offline banner in place, without reloading or navigating.
   The current page, signup step and entered values remain intact. Connectivity probes pause while
   the app is hidden and check again on return, including after opening an authenticator app.
+  Slow probes show a non-blocking **Reconnecting to JobPilot** notice after five seconds and
+  allow up to 90 seconds for a sleeping server to wake. Failed probes show **Cannot reach
+  JobPilot**, not a claim that the internet is disconnected; the offline message is reserved
+  for browser-reported disconnection. Health checks require the API's JSON response, so a
+  hosting startup page is not mistaken for a healthy server. Render Free can still display
+  its startup screen on a full refresh; always-on hosting is needed to prevent idle sleep.
 
 ## Session expiry
 

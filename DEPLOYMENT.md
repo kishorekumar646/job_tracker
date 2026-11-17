@@ -12,6 +12,11 @@ keeps HttpOnly login cookies and PWA installation working without cross-site-coo
 - [Render Free](https://render.com/docs/free) sleeps after 15 idle minutes. Waking can take about
   a minute. It has ephemeral disk storage, no shell access, and blocks outbound SMTP ports
   25/465/587. Usage quotas also apply. Render explicitly does not recommend free instances for production.
+  Returning to an open tab reconnects in place: the app allows up to 90 seconds for its health
+  probe and distinguishes server unavailability from a browser-reported lost connection.
+  The reconnect notice does not block the page or reload it. Refreshing or opening a new tab
+  can still show Render's startup page before JobPilot loads; use an always-on paid instance
+  to avoid idle spin-down. Browser polling pauses in hidden tabs and is not an uptime guarantee.
 - [Supabase Free](https://supabase.com/pricing) includes a 500 MB database and may pause projects
   after a week of inactivity. Resumes and profile photos count toward the database limit; this setup does
   **not** use the separate Supabase Storage quota. Monitor usage and arrange your own backups.
