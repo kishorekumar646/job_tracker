@@ -6,6 +6,7 @@ Admin user management, mounted at ``/api/v1/admin`` (admins only).
     POST   /admin/users                   create an activated user, returns the authenticator QR
     PATCH  /admin/users/{id}/role         promote / demote
     POST   /admin/users/{id}/pro          grant / extend Pro without a payment
+    DELETE /admin/users/{id}/pro          remove current Pro access, keeping billing history
     PATCH  /admin/users/{id}/status       activate / deactivate (toggle)
     POST   /admin/users/{id}/reset-totp   issue a new authenticator secret and QR
     PATCH  /admin/users/{id}/name         edit the display name
@@ -26,7 +27,7 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...auth import auth_manager
@@ -165,6 +166,26 @@ async def grant_user_pro(user_id: int, admin: User = Depends(require_admin), db:
     ))
     await db.commit()
     logger.info("Admin %s granted %s days of Pro to user %s, valid until %s", admin.id, settings.PRO_DAYS, user.id, user.plan_expires_at)
+    return await _out(db, user)
+
+
+@router.delete("/users/{user_id}/pro", response_model=AdminUserOut)
+async def revoke_user_pro(user_id: int, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_async_db)):
+    user = await _get(db, user_id)
+    if effective_plan(user) != "pro":
+        raise HTTPException(status.HTTP_409_CONFLICT, "This account is already on the Free plan")
+    user.plan, user.plan_expires_at = "free", None
+    await db.execute(
+        update(Subscription).where(
+            Subscription.user_id == user.id, Subscription.plan_id == "pro", Subscription.status == "ACTIVE",
+        ).values(status="CANCELLED")
+    )
+    db.add(Notification(
+        user_id=user.id, notif_type="billing", title="Pro access removed",
+        message="An admin removed your Pro access. Your account is now on the Free plan. Previous auto-apply usage still counts toward the Free limit. No payment has been refunded.",
+    ))
+    await db.commit()
+    logger.info("Admin %s removed Pro access from user %s", admin.id, user.id)
     return await _out(db, user)
 
 

@@ -1,6 +1,6 @@
 // Author: Kishore Kumar
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Camera, Check, ShieldCheck } from 'lucide-react'
+import { Camera, Check, Crown, ShieldCheck } from 'lucide-react'
 import { authApi, profileApi } from '../api'
 import { errorMessage } from '../api/client'
 import { ResumeUploader } from '../components/features'
@@ -82,6 +82,7 @@ function AccountCard() {
   const photoInput = useRef<HTMLInputElement>(null)
   if (!user) return null
   const isAdmin = user.role === 'admin'
+  const isPro = user.plan === 'pro'
   const since = user.created_at ? new Date(user.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : null
 
   const save = async () => {
@@ -130,6 +131,10 @@ function AccountCard() {
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-gray-100">{user.name ?? '—'}</p>
           <p className="truncate text-xs text-gray-500">{user.email}</p>
+          <span aria-label={`Account plan: ${isPro ? 'Pro' : 'Free'}`} className={`badge mt-2 ${isPro ? 'bg-amber-500/10 text-amber-400 ring-amber-500/30' : 'bg-gray-800 text-gray-300 ring-gray-700'}`}>
+            {isPro && <Crown aria-hidden="true" className="h-3 w-3" />}
+            {isPro ? 'Pro plan' : 'Free plan'}
+          </span>
           {since && <p className="mt-1 text-[11px] text-gray-500">Member since {since}</p>}
         </div>
         <div className="flex w-full flex-wrap items-center justify-between gap-4 border-t border-gray-800 pt-4"><div><p className="label mb-3">Accent colour</p><ThemePicker dark /></div><span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${isAdmin ? 'bg-amber-900/40 text-amber-400 ring-amber-800' : 'bg-brand-900/40 text-brand-400 ring-brand-800'}`}>{isAdmin ? 'Admin' : 'User'}</span></div>

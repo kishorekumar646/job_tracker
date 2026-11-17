@@ -186,6 +186,7 @@ export interface AdminTotpResult {
 export const adminApi = {
   list: () => apiClient.get<{ users: AdminUser[]; total: number; pending: number; pro_days: number }>('/admin/users').then((r) => r.data),
   grantPro: (id: number) => apiClient.post<AdminUser>(`/admin/users/${id}/pro`).then((r) => r.data),
+  revokePro: (id: number) => apiClient.delete<AdminUser>(`/admin/users/${id}/pro`).then((r) => r.data),
   create: (body: { email: string; name?: string; role: 'user' | 'admin' }) =>
     apiClient.post<AdminTotpResult>('/admin/users', body).then((r) => r.data),
   setRole: (id: number, role: 'user' | 'admin') => apiClient.patch<AdminUser>(`/admin/users/${id}/role`, { role }).then((r) => r.data),

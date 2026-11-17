@@ -424,6 +424,11 @@ async def _make_admin(email):
 async def test_admin_requires_admin_role(client, user):
     assert (await client.get("/api/v1/admin/users")).status_code == 403
     assert (await client.post(f"{API}/admin/users/{user['id']}/pro")).status_code == 403
+    assert (await client.delete(f"{API}/admin/users/{user['id']}/pro")).status_code == 403
+
+
+async def test_remove_pro_requires_authentication(client):
+    assert (await client.delete(f"{API}/admin/users/1/pro")).status_code == 401
 
 
 async def test_admin_grants_and_extends_complimentary_pro(client, user, monkeypatch):
@@ -472,6 +477,109 @@ async def test_admin_grants_and_extends_complimentary_pro(client, user, monkeypa
     assert billing["plan"] == "pro" and billing["plan_expires_at"] == extended["plan_expires_at"]
     assert billing["lifetime_limit"] is None and billing["daily_limit"] == settings.PRO_DAILY_APPLY_LIMIT
     assert (await client.get(f"{API}/auto-apply/status")).json()["lifetime_limit"] is None
+
+
+@pytest.mark.parametrize("paid", [False, True])
+async def test_admin_removes_pro_preserving_history_and_usage(client, user, monkeypatch, paid):
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, select
+    from app.database import async_session_factory, settings
+    from app.models import Application, Job, Notification, Order, Subscription, Transaction, User
+
+    monkeypatch.setattr(settings, "FREE_TOTAL_APPLY_LIMIT", 1)
+    user_cookies = dict(client.cookies)
+    now = datetime.utcnow()
+    paid_expiry = now + timedelta(days=30)
+    async with async_session_factory() as db:
+        job = Job(title="Preview role", company="Preview", job_url="https://example.test/job")
+        db.add(job)
+        await db.flush()
+        db.add(Application(user_id=user["id"], job_id=job.id, auto_applied=True))
+        if paid:
+            target = await db.get(User, user["id"])
+            target.plan, target.plan_expires_at = "pro", paid_expiry
+            order = Order(
+                user_id=user["id"], order_ref="JP-REVOKE-TEST", base_amount=9900, unique_amount=9901,
+                status="PAID", expires_at=now, paid_at=now, invoice_no="INV-REVOKE-TEST",
+            )
+            db.add(order)
+            await db.flush()
+            db.add(Transaction(order_id=order.id, utr_number="123456789012", verification_source="ADMIN"))
+            db.add(Subscription(
+                user_id=user["id"], order_id=order.id, plan_id="pro", status="ACTIVE",
+                start_date=now, end_date=paid_expiry,
+            ))
+        await db.commit()
+    boss, _ = await register(client, "boss@gmail.com", "Boss")
+    await _make_admin("boss@gmail.com")
+    assert (await client.post(f"{API}/admin/users/{boss['id']}/pro")).status_code == 200
+    for _ in range(2):
+        assert (await client.post(f"{API}/admin/users/{user['id']}/pro")).status_code == 200
+
+    removed = await client.delete(f"{API}/admin/users/{user['id']}/pro")
+    assert removed.status_code == 200
+    assert removed.json()["plan"] == "free" and removed.json()["plan_expires_at"] is None
+    assert (await client.delete(f"{API}/admin/users/{user['id']}/pro")).status_code == 409
+    async with async_session_factory() as db:
+        target = await db.get(User, user["id"])
+        assert target.plan == "free" and target.plan_expires_at is None
+        subs = (await db.scalars(select(Subscription).where(Subscription.user_id == user["id"]))).all()
+        assert len(subs) == 2 + int(paid) and all(sub.status == "CANCELLED" for sub in subs)
+        assert (await db.scalar(select(Subscription).where(Subscription.user_id == boss["id"]))).status == "ACTIVE"
+        assert (await db.get(User, boss["id"])).plan == "pro"
+        assert await db.scalar(select(func.count()).select_from(Order)) == int(paid)
+        assert await db.scalar(select(func.count()).select_from(Transaction)) == int(paid)
+        if paid:
+            order = await db.scalar(select(Order))
+            assert order.status == "PAID" and order.invoice_no == "INV-REVOKE-TEST"
+            original = next(sub for sub in subs if sub.order_id == order.id)
+            assert original.start_date == now and original.end_date == paid_expiry
+        assert await db.scalar(select(func.count()).select_from(Notification).where(
+            Notification.user_id == user["id"], Notification.title == "Pro access removed",
+        )) == 1
+
+    admin_cookies = dict(client.cookies)
+    client.cookies.clear()
+    client.cookies.update(user_cookies)
+    billing = (await client.get(f"{API}/billing/me")).json()
+    assert billing["plan"] == "free" and billing["plan_expires_at"] is None
+    assert billing["lifetime_used"] == 1 and billing["lifetime_limit"] == 1
+    assert (await client.get(f"{API}/auto-apply/status")).json()["lifetime_limit"] == 1
+    assert (await client.get(f"{API}/auth/me")).json()["plan"] == "free"
+    if paid:
+        invoice = await client.get(f"{API}/billing/orders/{order.id}/invoice")
+        assert invoice.status_code == 200 and invoice.content.startswith(b"%PDF")
+    client.cookies.clear()
+    client.cookies.update(admin_cookies)
+    assert (await client.post(f"{API}/admin/users/{user['id']}/pro")).json()["plan"] == "pro"
+    async with async_session_factory() as db:
+        subs = (await db.scalars(select(Subscription).where(Subscription.user_id == user["id"]))).all()
+        assert sum(sub.status == "ACTIVE" for sub in subs) == 1
+        assert sum(sub.status == "CANCELLED" for sub in subs) == 2 + int(paid)
+
+
+async def test_admin_remove_pro_rejects_missing_or_free_account(client, user):
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, select
+    from app.database import async_session_factory
+    from app.models import Notification, User
+
+    await _make_admin(user["email"])
+    assert (await client.delete(f"{API}/admin/users/999999/pro")).status_code == 404
+    assert (await client.delete(f"{API}/admin/users/{user['id']}/pro")).status_code == 409
+    async with async_session_factory() as db:
+        target = await db.get(User, user["id"])
+        target.plan, target.plan_expires_at = "pro", datetime.utcnow() - timedelta(days=1)
+        await db.commit()
+    assert (await client.delete(f"{API}/admin/users/{user['id']}/pro")).status_code == 409
+    async with async_session_factory() as db:
+        assert await db.scalar(select(func.count()).select_from(Notification).where(
+            Notification.title == "Pro access removed",
+        )) == 0
+    assert (await client.post(f"{API}/admin/users/{user['id']}/pro")).status_code == 200
+    removed_self = await client.delete(f"{API}/admin/users/{user['id']}/pro")
+    assert removed_self.json()["plan"] == "free" and removed_self.json()["role"] == "admin"
+    assert (await client.get(f"{API}/admin/users")).status_code == 200
 
 
 async def test_admin_user_management(client):

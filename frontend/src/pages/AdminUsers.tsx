@@ -1,7 +1,7 @@
 // Author: Kishore Kumar
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
-  Cake, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, Copy, Crown, Eye, Gift, MailCheck, Pencil, RefreshCw, Search,
+  Cake, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CircleMinus, Clock, Copy, Crown, Eye, Gift, MailCheck, Pencil, RefreshCw, Search,
   ShieldCheck, ShieldOff, Trash2, UserCheck, UserPlus, UserX, Users, Wifi, X as XIcon,
 } from 'lucide-react'
 import { adminApi, type AdminTotpResult, type AdminUser, type AdminUserDetail } from '../api'
@@ -16,7 +16,7 @@ const GRID = 'grid grid-cols-2 gap-3 xl:grid-cols-[minmax(190px,1fr)_130px_90px_
 type RoleFilter = 'all' | 'user' | 'admin'
 type StatusFilter = 'all' | 'pending' | 'active' | 'inactive' | 'online' | 'offline'
 type SortField = 'email' | 'created_at'
-type Action = 'delete' | 'status' | 'role' | 'totp' | 'pro'
+type Action = 'delete' | 'status' | 'role' | 'totp' | 'pro' | 'revoke-pro'
 type Pending = { action: Action; user: AdminUser }
 
 function presence(lastSeen: string | null): 'online' | 'away' | 'offline' {
@@ -236,7 +236,14 @@ export function UsersTab() {
       if (action === 'delete') { await adminApi.remove(user.id); toast.success('User deleted.') }
       else if (action === 'status') { await adminApi.toggleStatus(user.id); toast.success(user.is_active ? 'User deactivated.' : 'User activated.') }
       else if (action === 'role') { await adminApi.setRole(user.id, user.role === 'admin' ? 'user' : 'admin'); toast.success('Role updated.') }
-      else if (action === 'pro') { await adminApi.grantPro(user.id); toast.success('Pro access updated.') }
+      else if (action === 'pro' || action === 'revoke-pro') {
+        const updated = action === 'pro' ? await adminApi.grantPro(user.id) : await adminApi.revokePro(user.id)
+        const current = useAuthStore.getState().user
+        if (current?.id === updated.id) {
+          useAuthStore.getState().setUser({ ...current, plan: updated.plan, plan_expires_at: updated.plan_expires_at })
+        }
+        toast.success(action === 'pro' ? 'Pro access updated.' : 'Pro access removed. Account is now on the Free plan.')
+      }
       else setQr(await adminApi.resetTotp(user.id))
       setConfirm(null)
       await load()
@@ -249,6 +256,7 @@ export function UsersTab() {
     role: `Make ${u.email} ${u.role === 'admin' ? 'a member' : 'an admin'}? They will be notified.`,
     totp: `Reset the authenticator for ${u.email}? Their current app code will stop working and all device passkeys will be revoked.`,
     pro: `Grant ${proDays} days of Pro to ${u.email} without a payment?${u.plan === 'pro' ? ' This extends their current Pro expiry.' : ''} They will be notified.`,
+    'revoke-pro': `Remove all current Pro access from ${u.email} and switch to the Free plan immediately? This includes any remaining paid Pro time. Previous auto-apply usage is not reset. No refund will be issued. They will be notified.`,
   })[action]
 
   const stats = [
@@ -373,6 +381,7 @@ export function UsersTab() {
                     <div className="col-span-2 flex flex-wrap items-center gap-1.5 xl:col-span-1">
                       <ActionBtn title="View profile" color="sky" icon={<Eye className="h-3.5 w-3.5" />} onClick={() => setViewing(u.id)} />
                       <ActionBtn title={u.plan === 'pro' ? 'Extend Pro' : 'Grant Pro'} color="amber" icon={<Gift className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'pro', user: u })} />
+                      {u.plan === 'pro' && <ActionBtn title="Remove Pro" color="red" icon={<CircleMinus className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'revoke-pro', user: u })} />}
                       <ActionBtn title={u.role === 'admin' ? 'Demote to User' : 'Promote to Admin'} color={u.role === 'admin' ? 'amber' : 'brand'} disabled={self} icon={u.role === 'admin' ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'role', user: u })} />
                       <ActionBtn title={u.is_active ? 'Deactivate' : 'Activate'} color="gray" disabled={self} icon={u.is_active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'status', user: u })} />
                       <ActionBtn title="Reset TOTP" color="gray" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={() => setConfirm({ action: 'totp', user: u })} />
@@ -408,7 +417,7 @@ export function UsersTab() {
             <p className="text-sm text-gray-300">{label(confirm)}</p>
             <div className="flex justify-end gap-2">
               <button className="btn-secondary" onClick={() => setConfirm(null)}>Cancel</button>
-              <button className={confirm.action === 'delete' ? 'btn-danger' : 'btn-primary'} disabled={busy} onClick={run}>{busy && <Spinner />}Confirm</button>
+              <button className={confirm.action === 'delete' || confirm.action === 'revoke-pro' ? 'btn-danger' : 'btn-primary'} disabled={busy} onClick={run}>{busy && <Spinner />}Confirm</button>
             </div>
           </div>
         )}

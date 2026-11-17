@@ -134,6 +134,12 @@ Admin > Users has a gift action to **Grant Pro** (or **Extend Pro**). After conf
 `POST /api/v1/admin/users/{id}/pro` grants the configured `PRO_DAYS`, extending any unexpired Pro
 access. It creates a complimentary subscription and user notification, and logs the acting admin.
 It does not create an order, payment or invoice. Only admins can use this endpoint.
+Pro accounts also have a **Remove Pro** action. After an explicit warning and confirmation,
+`DELETE /api/v1/admin/users/{id}/pro` switches the account immediately to Free and marks its
+active Pro subscriptions cancelled, including remaining paid time. The user is notified and the
+acting admin is logged. Subscription dates, orders, payments, invoices and prior usage are
+preserved; this does not issue a refund or reset the Free lifetime limit. An account already
+on Free returns a conflict rather than issuing another removal notification.
 
 Lists, dashboard totals, auto-apply usage, billing and admin counters refresh after successful
 changes, including deletions. Other tabs in the same browser receive a refresh signal; visible
@@ -206,6 +212,11 @@ and short screens and authenticator setup scroll naturally without clipping.
 Page headings and signup progress steps are centered within the form card; field labels stay left-aligned.
 
 ## Shared appearance
+
+Settings > Profile shows the account's current Free or Pro plan tag beside its identity details,
+separately from the Admin/User role.
+The top profile button and its hover card show Free plan or Pro plan instead of the account role;
+admin navigation and permissions still use the account role.
 
 The public site, authentication, onboarding, workspace, settings and admin pages share the dark
 ink surfaces, champagne accents, editorial headings and responsive controls. Champagne is the

@@ -103,6 +103,7 @@ function useShortcuts() {
 export function AppLayout() {
   const { user, logout } = useAuthStore()
   const displayName = user?.name || user?.email.split('@')[0] || 'User'
+  const isPro = user?.plan === 'pro'
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -207,7 +208,7 @@ export function AppLayout() {
                 <UserAvatar user={user} className="h-7 w-7 text-xs" />
                 <div className="hidden text-left sm:block">
                   <p className="max-w-[8rem] truncate text-xs font-medium leading-tight text-gray-200">{displayName}</p>
-                  <p className={`text-[10px] font-medium leading-tight ${user?.role === 'admin' ? 'text-amber-400' : 'text-gray-500'}`}>{user?.role === 'admin' ? 'Admin' : 'Member'}</p>
+                  <p className={`text-[10px] font-medium leading-tight ${isPro ? 'text-amber-400' : 'text-gray-500'}`}>{isPro ? 'Pro plan' : 'Free plan'}</p>
                 </div>
                 <Settings className="hidden h-3.5 w-3.5 shrink-0 text-gray-600 group-hover:text-gray-400 sm:block" />
               </button>
@@ -222,8 +223,8 @@ export function AppLayout() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between px-4 py-2.5">
-                      <span className="text-[10px] text-gray-500">Role</span>
-                      <span className={`text-[10px] font-semibold ${user?.role === 'admin' ? 'text-amber-400' : 'text-gray-300'}`}>{user?.role === 'admin' ? 'Admin' : 'Member'}</span>
+                      <span className="text-[10px] text-gray-500">Plan</span>
+                      <span className={`text-[10px] font-semibold ${isPro ? 'text-amber-400' : 'text-gray-300'}`}>{isPro ? 'Pro plan' : 'Free plan'}</span>
                     </div>
                     <div className="border-t border-gray-800 px-4 py-2"><p className="text-[10px] text-gray-600">Click to open settings</p></div>
                   </div>
